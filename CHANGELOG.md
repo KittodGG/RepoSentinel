@@ -1,0 +1,18 @@
+# Changelog
+
+## 0.1.0-beta.1 — 20 August 2026
+
+### Added
+
+- Multilingual CLI UI for English and Bahasa Indonesia.
+- Local-first repository discovery with ignore patterns, bounded text reads, binary detection, and symlink safety.
+- Deterministic normalized findings, severity scoring, threshold-based exit codes, and redacted evidence.
+- Initial rule pack covering documentation, links, images, badges, security, package hygiene, Git hygiene, community readiness, CI permissions, and portfolio demo visibility.
+- Terminal, Markdown, and JSON reporters with stable `reposentinel.report/v1` machine output.
+- `check`, `report`, `lang`, `init`, `rules`, and `explain` CLI commands.
+- Node.js 24 LTS target, pnpm workspace, strict TypeScript, Vitest tests, reproducible package staging, quality workflow, and reusable GitHub Action.
+- Dogfooding and hardening scripts for self-scan, JSON schema, invalid input, redaction, and safe failure checks.
+
+### Beta limitations
+
+This beta is a repository-readiness assistant, not a SAST engine, dependency vulnerability scanner, secret-management platform, or formal security audit. The GitHub Action builds from the checked-out repository rather than installing a registry-published version. Third-party Action references are still tag-based and must be pinned to reviewed commit SHAs before a hardened production release.
