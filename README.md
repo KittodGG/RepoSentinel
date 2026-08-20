@@ -1,66 +1,241 @@
-# RepoSentinel
+<div align="center">
 
-> **Cek repository Anda sebelum orang lain menilainya.**
+![RepoSentinel banner](docs/assets/reposentinel-banner.svg)
 
-RepoSentinel adalah rancangan **CLI-first, local-first, deterministic, dan explainable** untuk memeriksa kesiapan sebuah repository sebelum dibagikan, dipublikasikan, dipamerkan sebagai portfolio, atau menerima kontribusi.
+[![Status: concept planning](https://img.shields.io/badge/status-concept--planning-38bdf8?style=for-the-badge&labelColor=07111f)](docs/ROADMAP_BETA_PRODUCTION.md)
+[![Local-first](https://img.shields.io/badge/privacy-local--first-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RepoSentinel_Project_Context.md)
+[![Languages: EN%20%7C%20ID](https://img.shields.io/badge/languages-EN%20%7C%20ID-a78bfa?style=for-the-badge&labelColor=11102b)](docs/TECH_STACK_DECISIONS.md)
 
-## Status saat ini
+**Repository readiness, without the noise.**  
+*Cek repository Anda sebelum orang lain menilainya.*
 
-Repository ini berada pada tahap **concept specification / MVP planning**. Package npm, command, GitHub Action, URL dokumentasi, dan output CLI yang tercantum di dalam dokumen masih merupakan **target design** sampai benar-benar diimplementasikan dan diverifikasi melalui test.
+[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [Security boundary](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md)
 
-## Fokus MVP
+</div>
 
-MVP akan memeriksa dokumentasi, README, Quick Start, link, image, badge, metadata, package hygiene, `.gitignore`, workflow CI, security hygiene dasar, license readiness, dan kesiapan contributor. Output target mencakup terminal interaktif, terminal plain/CI, Markdown, JSON, dan kemudian SARIF.
+> **Important / Penting:** RepoSentinel is currently a **concept specification / MVP planning project**. The package, commands, GitHub Action, documentation URLs, and CLI screenshots in this repository describe the target product experience until implementation and verification are complete.
 
-RepoSentinel **bukan** pengganti SAST, secret scanner enterprise, dependency vulnerability scanner penuh, atau audit keamanan formal. Health score adalah ringkasan repository readiness dan tidak boleh dibaca sebagai jaminan bahwa repository aman atau bebas vulnerability.
+---
 
-## Prinsip keamanan
+## English
 
-Local scan tidak mengirim source code ke server dan tidak melakukan network call secara default. Scanner membaca repository sebagai data; scanner tidak menjalankan `npm install`, package script, lifecycle hook, build command, executable hasil build, atau arbitrary shell command dari repository target. Nilai secret, private key, isi `.env`, dan full sensitive line tidak boleh ditampilkan.
+### The idea
 
-## Command target
+Good code can still look unready when the README is unclear, Quick Start is missing, demo links are broken, screenshots do not resolve, package metadata conflicts, `.env` enters Git, or contributors do not know where to begin.
 
-Command berikut adalah kontrak UX target dan belum dianggap tersedia sebelum implementasi dipublikasikan dan diuji:
+RepoSentinel is a planned developer tool that checks the layer around the code: **documentation, discoverability, links, assets, package hygiene, Git metadata, security hygiene, CI configuration, and contributor readiness**. It is designed to feel like a calm, actionable repository linter—not a wall of cryptic warnings.
 
-```bash
-npx reposentinel check .
-reposentinel check . --profile portfolio
-reposentinel rules --category security
-reposentinel explain documentation.quickstart
-reposentinel report --format markdown
-reposentinel baseline create
-```
+### What makes it different
 
-Untuk desain tampilan terminal yang rapi dan interaktif, lihat [Visual & Interactive CLI Specification](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md). Untuk seluruh skenario dan mock output, lihat [CLI Case Examples](docs/RepoSentinel_CLI_Case_Examples.md). Untuk urutan implementasi sampai beta production, lihat [Roadmap Beta Production](docs/ROADMAP_BETA_PRODUCTION.md).
+| Pillar | What it means |
+|---|---|
+| **Local-first** | Source code stays on the user’s machine during local scans. Network rules are opt-in. |
+| **Deterministic** | The same repository and configuration produce the same normalized findings. |
+| **Explainable** | Every finding has a rule ID, severity, location, evidence, impact, and remediation. |
+| **Profile-driven** | `public`, `portfolio`, and `npm-package` repositories have different readiness needs. |
+| **Safe by default** | The scanner reads the target as data and does not run its package scripts or build commands. |
+| **Multilingual** | UI copy and documentation can be localized while rule IDs and machine schemas remain stable. |
 
-## Struktur awal
+### What it checks
 
 ```text
-reposentinel/
-├── .github/
-├── docs/
-├── fixtures/
-├── packages/
-│   ├── cli/
-│   ├── config/
-│   ├── core/
-│   ├── reporters/
-│   ├── rules/
-│   └── shared/
-├── action/
-├── AGENTS.md
-├── package.json                 # akan dibuat pada fase bootstrap implementasi
-└── README.md
+README & docs       Quick Start · description · headings · structure
+Links & assets      URLs · images · badges · demo references
+Security hygiene    .env · private keys · high-confidence credential patterns
+Package hygiene     lockfiles · manifest · scripts · package metadata
+Git metadata        .gitignore · tracked generated files · large files
+Community           license presence · issue templates · contributor readiness
+CI & automation     workflow permissions · release metadata · syntax hints
+Portfolio profile   summary · tech stack · screenshot · visible demo
 ```
 
-## Cara berkontribusi pada tahap awal
+### Target experience
 
-Pada tahap spesifikasi, perubahan sebaiknya dimulai dari context, problem, proposed solution, acceptance criteria, dependencies, risks, dan prioritas P0/P1/P2. Jangan menambah rule tanpa `rule_id`, kategori, severity, detector, evidence, remediation, fixture positif/negatif, regression test, dan dokumentasi.
+```text
+install → check → understand finding → fix → check again → share
+```
 
-## Referensi internal
+A successful interactive scan is designed to look like this:
+
+```text
+◈ RepoSentinel 0.1.0  ·  portfolio-app
+  local scan · network off · locale en
+
+╭─ health snapshot ─────────────────────────────────────────────╮
+│  86 / 100   ALMOST READY                                      │
+│  0 critical · 0 error · 2 warnings · 3 info                   │
+╰────────────────────────────────────────────────────────────────╯
+
+  › ! documentation.quickstart   README.md:18       warning
+      README has no runnable installation command
+  ◇   links.valid                README.md:31       warning
+      Link could not be resolved
+
+  ↑↓ select · enter details · f filter · r rescan · o report · q quit
+
+  Result: passed with warnings                                      exit 0
+```
+
+### Target commands
+
+> These are **planned UX contracts**, not a claim that the package is already published.
+
+```bash
+# One-shot local scan
+npx reposentinel check .
+
+# Scan with a profile and Indonesian UI
+reposentinel check . --profile portfolio --lang id
+
+# Inspect security rules
+reposentinel rules --category security --lang en
+
+# Explain one finding
+reposentinel explain documentation.quickstart --lang id
+
+# Export a machine-readable report
+reposentinel check . --format json --lang en > report.json
+```
+
+The target language resolution order is `--lang`, `REPOSENTINEL_LANG`, config, interactive environment hint, then deterministic English fallback. Rule IDs, config keys, JSON keys, exit codes, and schema version stay stable across languages.
+
+### Architecture at a glance
+
+```mermaid
+flowchart LR
+  A[Developer / CI] --> B[RepoSentinel CLI]
+  B --> C[Locale + Config]
+  B --> D[Safe Discovery]
+  D --> E[Deterministic Rule Engine]
+  E --> F[Normalized Findings]
+  F --> G[Sentinel Console]
+  F --> H[Markdown / JSON / SARIF]
+  G --> I[Exit Decision]
+  H --> I
+```
+
+### Project status
+
+| Area | Status |
+|---|---|
+| Product context and scope | `implemented` as documentation |
+| Bilingual README direction | `implemented` as documentation |
+| CLI visual interaction specification | `implemented` as documentation |
+| Multilingual architecture decision | `implemented` as documentation |
+| Core engine | `planned` |
+| Rule pack | `planned` |
+| CLI package | `planned` |
+| GitHub Action | `planned` |
+| npm publication | `planned` |
+| Beta production | `planned` |
+
+### Safety boundaries
+
+RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure.
+
+During a local scan, RepoSentinel should not send source code to a server, call the network by default, execute `npm install`, execute package scripts, run build hooks, follow symlinks outside the target root, or print secret values. Security findings must show safe path/line context and redacted evidence only.
+
+### Read the design docs
+
+| Document | Purpose |
+|---|---|
+| [Project Context](docs/RepoSentinel_Project_Context.md) | Product source of truth, scope, principles, and acceptance criteria. |
+| [Tech Stack & Rule Engine](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md) | Core architecture, findings, rule contract, fixtures, and security boundary. |
+| [CLI Case Examples](docs/RepoSentinel_CLI_Case_Examples.md) | All target commands, success cases, warnings, errors, reports, and exit codes. |
+| [Visual & Interactive CLI](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) | Sentinel Console panels, keyboard navigation, themes, fallback, and CI mode. |
+| [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md) | Node.js, TypeScript, CLI, localization, performance, and dependency decisions. |
+| [Beta Production Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) | One-by-one stages from repository bootstrap to beta production. |
+
+---
+
+## Bahasa Indonesia
+
+### Gagasannya
+
+Kode yang baik tetap dapat terlihat belum siap ketika README sulit dipahami, Quick Start tidak tersedia, link demo rusak, screenshot tidak tampil, metadata package tidak konsisten, `.env` ikut masuk Git, atau contributor tidak tahu harus mulai dari mana.
+
+RepoSentinel adalah rancangan developer tool untuk memeriksa lapisan di sekitar kode: **dokumentasi, discoverability, link, asset, package hygiene, metadata Git, security hygiene, konfigurasi CI, dan kesiapan contributor**. Pengalaman yang dituju adalah repository linter yang tenang dan actionable—bukan dinding warning yang sulit dipahami.
+
+### Prinsip produk
+
+| Pilar | Makna |
+|---|---|
+| **Local-first** | Source code tetap berada di perangkat pengguna saat local scan. Network rule bersifat opt-in. |
+| **Deterministic** | Repository dan konfigurasi yang sama menghasilkan finding yang sama. |
+| **Explainable** | Setiap finding memiliki rule ID, severity, lokasi, evidence, dampak, dan remediation. |
+| **Profile-driven** | Repository `public`, `portfolio`, dan `npm-package` memakai konteks pemeriksaan yang berbeda. |
+| **Safe by default** | Scanner membaca repository sebagai data dan tidak menjalankan package script atau build command. |
+| **Multilingual** | UI dan dokumentasi dapat diterjemahkan tanpa mengubah rule ID dan schema machine output. |
+
+### Bahasa yang direncanakan
+
+MVP dimulai dengan **English (`en`)** dan **Bahasa Indonesia (`id`)**. Bahasa lain dapat ditambahkan melalui message catalog tanpa mengubah detector. Command, rule ID, configuration key, schema, dan exit code tetap memakai identifier teknis yang stabil agar script dan CI tidak rusak.
+
+```bash
+# Bahasa Indonesia pada terminal interaktif
+reposentinel check . --profile portfolio --lang id
+
+# Bahasa English untuk CI yang deterministik
+CI=true reposentinel check . --lang en --format json
+```
+
+### Tahapan menuju beta production
+
+```text
+repository bootstrap
+        ↓
+governance + branch hygiene
+        ↓
+workspace + core contract
+        ↓
+safe discovery + 15 rule fixtures
+        ↓
+Sentinel Console + plain/JSON/Markdown reporters
+        ↓
+CLI MVP + package smoke test
+        ↓
+CI + GitHub Action
+        ↓
+dogfooding + closed beta
+        ↓
+beta production
+```
+
+Lihat [roadmap lengkap](docs/ROADMAP_BETA_PRODUCTION.md) untuk pekerjaan satu per satu, definition of done, risk control, release gate, dan urutan issue.
+
+### Status saat ini
+
+Repository ini baru berada pada tahap **fondasi dokumentasi dan perencanaan implementasi**. README, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, dan PR template sudah disiapkan. Core engine, rule pack, package npm, dan GitHub Action masih berstatus `planned` sampai benar-benar dibangun, diuji, dan diverifikasi.
+
+---
+
+## Tech stack target
+
+| Layer | Pilihan |
+|---|---|
+| Runtime | Node.js 24 LTS |
+| Language | TypeScript strict |
+| Workspace | pnpm workspace |
+| CLI parser | Commander |
+| Interactive prompts | `@clack/prompts` |
+| Config | `yaml` + `zod` |
+| Discovery | `fast-glob` + `ignore` |
+| Markdown | Unified/Remark AST |
+| Test | Vitest |
+| Reporters | Custom deterministic terminal, Markdown, JSON, SARIF |
+
+Keputusan ini mengutamakan runtime LTS, dependency yang terukur, core engine yang terpisah dari UI, dan kemampuan fallback untuk CI/SSH. Detailnya ada di [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md).
+
+## Contributing
+
+Pada tahap awal, perubahan harus diawali dengan `context → problem → proposed solution → acceptance criteria → dependencies → risks`. Rule baru wajib memiliki rule ID stabil, kategori, severity, detector, evidence, remediation, fixture positif/negatif, regression test, dan dokumentasi.
+
+Sebelum membuka pull request, jalankan check yang tersedia dan jelaskan dampak security/privacy. Jangan mengirim secret atau source code sensitif pada issue, log, screenshot, atau fixture.
+
+## References
 
 - [Project Context & Source of Truth](docs/RepoSentinel_Project_Context.md)
 - [Tech Stack and Rule Engine](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md)
-- [CLI Case Examples](docs/RepoSentinel_CLI_Case_Examples.md)
-- [Visual & Interactive CLI Specification](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md)
-- [Roadmap Beta Production](docs/ROADMAP_BETA_PRODUCTION.md)
+- [Node.js Releases](https://nodejs.org/en/about/previous-releases)
+- [Commander.js](https://github.com/tj/commander.js/)
+- [Clack Getting Started](https://bomb.sh/docs/clack/basics/getting-started/)
