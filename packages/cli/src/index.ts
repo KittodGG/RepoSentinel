@@ -25,7 +25,7 @@ import {
   type Locale
 } from "@reposentinel/i18n";
 
-const VERSION = "0.1.0-dev.1";
+const VERSION = "0.1.0-alpha.1";
 const profiles = ["public", "portfolio", "npm-package"] as const;
 const thresholds = ["critical", "error", "warning", "info"] as const;
 

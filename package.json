@@ -1,6 +1,6 @@
 {
   "name": "reposentinel-workspace",
-  "version": "0.1.0-dev.1",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "description": "RepoSentinel local-first repository readiness CLI workspace",
   "type": "module",
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm --filter @reposentinel/cli dev",
+    "pack:alpha": "pnpm --filter reposentinel build && node scripts/pack-alpha.mjs",
+    "dev": "pnpm --filter reposentinel dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
