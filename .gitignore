@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+.cache/
+*.log
+.env
+.env.*
+!.env.example
+.reposentinel/reports/
+.reposentinel/baseline.json
+.DS_Store
+.vscode/
+.idea/
