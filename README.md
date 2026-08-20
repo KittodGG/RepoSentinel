@@ -149,7 +149,7 @@ flowchart LR
 | GitHub Action | `implemented` as composite action and source-checkout workflow |
 | Dogfooding and hardening | `implemented` as local self-scan and safety gates |
 | npm publication | `planned` |
-| Beta production | `planned` |
+| Beta production | `beta candidate published` as `v0.1.0-beta.1`; pilot sign-off pending |
 
 ### Safety boundaries
 
