@@ -39,18 +39,19 @@ Format severity dan exit behavior mengikuti severity model RepoSentinel: `critic
 
 | Command | Kegunaan | Status target |
 |---|---|---|
-| `reposentinel --help` | Menampilkan bantuan command dan opsi. | Planned |
-| `reposentinel --version` | Menampilkan versi CLI. | Planned |
-| `reposentinel check <path>` | Menjalankan scan utama. | P0 / target MVP |
-| `reposentinel init` | Membuat `.reposentinel.yml`. | P0 / target MVP |
-| `reposentinel rules` | Menampilkan rule yang tersedia atau aktif. | P0 / target MVP |
-| `reposentinel explain <rule_id>` | Menjelaskan tujuan, severity, evidence, dan remediation suatu rule. | P0 / target MVP |
-| `reposentinel report` | Menghasilkan ulang report dari hasil scan terakhir. | P0 / target MVP |
-| `reposentinel baseline create` | Menyimpan finding lama sebagai baseline. | Planned; target setelah core stabil |
+| `reposentinel --help` | Menampilkan bantuan command dan opsi. | Implemented |
+| `reposentinel --version` | Menampilkan versi CLI. | Implemented |
+| `reposentinel check <path>` | Menjalankan scan utama. | Implemented |
+| `reposentinel init` | Membuat `.reposentinel.yml`, termasuk mode `--force` untuk CI. | Implemented |
+| `reposentinel rules` | Menampilkan rule yang tersedia atau aktif. | Implemented |
+| `reposentinel explain <rule_id>` | Menjelaskan tujuan, severity, evidence, dan remediation suatu rule. | Implemented |
+| `reposentinel report <path>` | Alias untuk `check`; menghasilkan terminal, Markdown, JSON, atau SARIF. | Implemented |
+| `reposentinel baseline create [path]` | Menyimpan fingerprint finding lama sebagai baseline. | Implemented |
+| `reposentinel check --baseline <file>` | Menghilangkan finding yang fingerprint-nya sudah ada di baseline. | Implemented |
 | `reposentinel check --watch` | Menjalankan scan ulang ketika file berubah. | Proposed / backlog awal |
 | `reposentinel check --network` | Mengaktifkan rule yang memerlukan network secara eksplisit. | Proposed; default tetap off |
 
-Nama package dan command tersebut masih merupakan rancangan UX sampai implementasi, test, dan publikasi selesai diverifikasi. [1] [3]
+Command berstatus `Implemented` di atas adalah kontrak beta yang sudah dibangun dan diuji. `--watch` dan `--network` tetap menjadi backlog karena network harus tetap opt-in dan mode watch membutuhkan lifecycle serta debounce policy yang terpisah. [1] [3]
 
 ## 4. Case A — Bantuan dan Versi CLI
 
@@ -949,16 +950,12 @@ Contoh JSON yang aman:
 ### L3. Export SARIF
 
 ```text
-$ reposentinel report --format sarif --output .reposentinel/reports/report.sarif
+$ reposentinel report . --format sarif --output .reposentinel/reports/report.sarif
 
-Rendered report: .reposentinel/reports/report.sarif
-Format          : sarif
-Schema          : SARIF 2.1.0
-
-Exit code: 0
+Report written to /workspace/project/.reposentinel/reports/report.sarif
 ```
 
-SARIF adalah target integrasi CI/code scanning. Output ini perlu diuji melalui integration test sebelum dinyatakan tersedia. [1] [3]
+SARIF `2.1.0` sudah tersedia dan schema regression-tested untuk integrasi CI/code scanning. [1] [3]
 
 ### L4. Format tidak didukung
 
@@ -978,89 +975,57 @@ Note: HTML report is not part of the MVP contract.
 
 **Exit code:** `2`.
 
-### L5. Belum ada hasil scan untuk di-render
+### L5. `report` adalah alias scan langsung
 
 ```text
-$ reposentinel report --format json
+$ reposentinel report . --format json --output report.json
 
-Error: No previous scan result was found.
-
-Run a scan first:
-  reposentinel check .
+Report written to /workspace/project/report.json
 ```
 
-**Exit code:** `2`.
+`report` tidak membaca hasil scan historis. Pada beta ini, `report <path>` adalah alias deterministik dari `check <path>` dengan pilihan format dan output file.
 
 ## 16. Case M — Baseline
 
 ### M1. Membuat baseline
 
 ```text
-$ reposentinel baseline create
+$ reposentinel baseline create .
 
-RepoSentinel Baseline
-Repository : legacy-project
-
-Current findings
-  Critical : 0
-  Error    : 1
-  Warning  : 6
-  Info     : 2
-
-Created .reposentinel/baseline.json
-
-The baseline stores finding fingerprints, not secret values.
-Future checks can focus on new findings.
-
-Exit code: 0
+Baseline created at /workspace/project/.reposentinel/baseline.json (9 findings)
 ```
 
-### M2. Check dengan baseline, tanpa regresi baru
+Baseline menyimpan `schemaVersion` dan fingerprint finding, bukan nilai secret. Parent directory dibuat secara otomatis dan path output tetap dibatasi ke dalam repository.
+
+### M2. Check dengan baseline tanpa finding baru
+
+```text
+$ reposentinel check . --baseline .reposentinel/baseline.json --format json
+
+{
+  "schemaVersion": "reposentinel.report/v1",
+  "summary": {
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0
+  }
+}
+```
+
+Finding yang fingerprint-nya sudah ada di baseline tidak ikut dinilai ulang untuk score dan exit threshold. Finding baru tetap muncul.
+
+### M3. Check dengan baseline dan regresi baru
 
 ```text
 $ reposentinel check . --baseline .reposentinel/baseline.json
 
-RepoSentinel Report
-Repository : legacy-project
-Baseline   : .reposentinel/baseline.json
-
-Findings
-  Existing and baselined : 9
-  New                    : 0
-  Resolved               : 1
-
-CRITICAL  0    ERROR  0    WARNING  0    INFO  0
-
-Result: passed — no new findings
-Note: 9 existing findings remain recorded in the baseline.
-
-Exit code: 0
+... warning/error finding baru tetap ditampilkan ...
+Result : failed bila finding baru mencapai threshold
+Exit code : 1
 ```
 
-### M3. Check dengan regresi baru
-
-```text
-$ reposentinel check . --baseline .reposentinel/baseline.json
-
-RepoSentinel Report
-Repository : legacy-project
-Baseline   : .reposentinel/baseline.json
-Threshold  : error
-
-Existing and baselined : 9
-New findings           : 1
-
-NEW ERROR security.credential-pattern
-     src/config.ts:44 contains a high-confidence credential pattern
-     Evidence: Value has been redacted: [REDACTED]
-     Fix: Revoke and rotate the credential, remove it from the repository, and review Git history.
-
-Result: failed — new findings exceed threshold
-
-Exit code: 1
-```
-
-Baseline tidak boleh menjadi cara untuk menyembunyikan secret baru. Finding baru tetap harus muncul dan harus tetap mengikuti threshold. Baseline merupakan fitur target setelah core CLI dan fingerprint stabil. [1]
+Baseline tidak boleh menjadi cara untuk menyembunyikan secret baru. Baseline hanya menekan finding lama berdasarkan fingerprint stabil; perubahan line atau isi yang menghasilkan fingerprint berbeda tetap perlu ditinjau. [1]
 
 ## 17. Case N — Watch Mode
 

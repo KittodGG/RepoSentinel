@@ -13,6 +13,8 @@ export type MessageKey =
   | "cli.command.init"
   | "cli.command.rules"
   | "cli.command.explain"
+  | "cli.command.baseline"
+  | "baseline.created"
   | "init.title"
   | "init.profileQuestion"
   | "init.created"
@@ -66,6 +68,8 @@ const catalogs: Record<Locale, Catalog> = {
     "cli.command.init": "Create a starter configuration",
     "cli.command.rules": "List enabled repository rules",
     "cli.command.explain": "Explain a repository rule",
+    "cli.command.baseline": "Create a baseline from the current scan",
+    "baseline.created": ({ path, count }) => `Baseline created at ${path} with ${count} finding(s).`,
     "init.title": "RepoSentinel setup",
     "init.profileQuestion": "Which repository profile should be used?",
     "init.created": ({ path }) => `Configuration created at ${path}`,
@@ -115,6 +119,8 @@ const catalogs: Record<Locale, Catalog> = {
     "cli.command.init": "Membuat konfigurasi awal",
     "cli.command.rules": "Menampilkan rule repository yang aktif",
     "cli.command.explain": "Menjelaskan sebuah rule repository",
+    "cli.command.baseline": "Membuat baseline dari hasil scan saat ini",
+    "baseline.created": ({ path, count }) => `Baseline dibuat di ${path} dengan ${count} finding.`,
     "init.title": "Setup RepoSentinel",
     "init.profileQuestion": "Profile repository mana yang digunakan?",
     "init.created": ({ path }) => `Konfigurasi dibuat di ${path}`,

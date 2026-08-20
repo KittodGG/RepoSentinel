@@ -23,7 +23,7 @@ function colorize(enabled: boolean, color: (value: string) => string, value: str
 }
 
 function code(value: string): string {
-  return "`" + value + "`";
+  return "`" + value.replaceAll("`", "\\`") + "`";
 }
 
 export type TerminalReportOptions = {
@@ -46,7 +46,11 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
   const status = t(statusMessageKey(summary.status));
   const resultLabel = summary.exitCode === 1 ? t("result.failed") : summary.counts.warning > 0 ? t("result.passedWithWarnings") : t("result.passed");
   const line = colors.dim("──────────────────────────────────────────────────────────────");
-  const boxRow = (value: string): string => `│ ${value}`.padEnd(63, " ") + "│";
+  const boxWidth = 63;
+  const boxTitle = "╭─ health snapshot ";
+  const boxTop = `${boxTitle}${"─".repeat(boxWidth - boxTitle.length - 1)}╮`;
+  const boxBottom = `╰${"─".repeat(boxWidth - 2)}╯`;
+  const boxRow = (value: string): string => `│ ${value}`.padEnd(boxWidth - 1, " ") + "│";
   const output = [
     `${colors.cyan("◈")} ${colors.bold(colors.white("RepoSentinel"))}`,
     colors.dim(`  ${t("brand.tagline")}`),
@@ -55,10 +59,10 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
     `${t("scan.profile")}    : ${profile}`,
     `${t("scan.mode")}       : local · network off · locale ${locale}`,
     "",
-    colors.blue("╭─ health snapshot ─────────────────────────────────────────────╮"),
+    colors.blue(boxTop),
     scoreColor(boxRow(`${summary.score} / 100   ${status.toUpperCase()}`)),
     colors.dim(boxRow(`${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`)),
-    colors.blue("╰────────────────────────────────────────────────────────────────╯"),
+    colors.blue(boxBottom),
     "",
     `${t("scan.findings")}  ${line}`,
     `${colors.red("CRITICAL")} ${summary.counts.critical}   ${colors.red("ERROR")} ${summary.counts.error}   ${colors.yellow("WARNING")} ${summary.counts.warning}   ${colors.cyan("INFO")} ${summary.counts.info}`
@@ -135,5 +139,47 @@ export function renderJsonReport(options: Omit<TerminalReportOptions, "color" | 
     threshold: options.threshold,
     summary: summary.counts,
     findings: options.findings
+  }, null, 2)}\n`;
+}
+
+function sarifLevel(severity: Finding["severity"]): "error" | "warning" | "note" {
+  return severity === "critical" || severity === "error" ? "error" : severity === "warning" ? "warning" : "note";
+}
+
+export function renderSarifReport(options: Omit<TerminalReportOptions, "color" | "filesScanned" | "ignoredCount">): string {
+  return `${JSON.stringify({
+    $schema: "https://json.schemastore.org/sarif-2.1.0.json",
+    version: "2.1.0",
+    runs: [{
+      tool: {
+        driver: {
+          name: "RepoSentinel",
+          informationUri: "https://github.com/KittodGG/RepoSentinel",
+          rules: options.findings.map((finding) => ({
+            id: finding.ruleId,
+            name: finding.ruleId,
+            shortDescription: { text: finding.message },
+            helpUri: finding.docsUrl
+          }))
+        }
+      },
+      results: options.findings.map((finding) => ({
+        ruleId: finding.ruleId,
+        level: sarifLevel(finding.severity),
+        message: { text: finding.message },
+        locations: finding.path ? [{
+          physicalLocation: {
+            artifactLocation: { uri: finding.path },
+            ...(finding.line ? { region: { startLine: finding.line, ...(finding.column ? { startColumn: finding.column } : {}) } } : {})
+          }
+        }] : undefined,
+        properties: {
+          severity: finding.severity,
+          category: finding.category,
+          remediation: finding.remediation,
+          ...(finding.evidence ? { evidence: finding.evidence } : {})
+        }
+      }))
+    }]
   }, null, 2)}\n`;
 }

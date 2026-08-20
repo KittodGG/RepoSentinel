@@ -18,8 +18,12 @@ describe("configuration", () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-config-"));
     await writeFile(join(root, ".reposentinel.yml"), [
       "profile: npm-package",
+      "baseline: .reposentinel/baseline.json",
       "ignore:",
       "  - vendor/**",
+      "report:",
+      "  formats: [json, sarif]",
+      "  output_dir: .reposentinel/reports",
       "rules:",
       "  security.private-key: critical",
       "ci:",
@@ -31,7 +35,10 @@ describe("configuration", () => {
 
     const loaded = await loadConfig(root);
     expect(loaded.config.profile).toBe("npm-package");
+    expect(loaded.config.baseline).toBe(".reposentinel/baseline.json");
     expect(loaded.config.ignore).toContain("vendor/**");
+    expect(loaded.config.report?.formats).toEqual(["json", "sarif"]);
+    expect(loaded.config.report?.outputDir).toBe(".reposentinel/reports");
     expect(loaded.config.ciFailOn).toBe("warning");
     expect(loaded.config.security.network).toBe(false);
     expect(severityOverride(loaded.config, "security.private-key", "warning")).toBe("critical");

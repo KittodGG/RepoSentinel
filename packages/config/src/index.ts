@@ -2,16 +2,22 @@ import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
-import type { RepositoryProfile, ResolvedConfig, Severity } from "@reposentinel/core";
+import type { ReportFormat, RepositoryProfile, ResolvedConfig, Severity } from "@reposentinel/core";
 
 const severitySchema = z.enum(["critical", "error", "warning", "info", "off"]);
 const profileSchema = z.enum(["public", "portfolio", "npm-package"]);
+const reportFormatSchema = z.enum(["terminal", "markdown", "json", "sarif"]);
 
 const rawConfigSchema = z.object({
   extends: z.string().optional(),
+  baseline: z.string().optional(),
   profile: profileSchema.optional(),
   rules: z.record(z.string(), severitySchema).optional(),
   ignore: z.array(z.string()).optional(),
+  report: z.object({
+    formats: z.array(reportFormatSchema).optional(),
+    output_dir: z.string().optional()
+  }).optional(),
   security: z.object({
     network: z.boolean().optional(),
     scan_history: z.boolean().optional(),
@@ -30,6 +36,7 @@ export const defaultIgnore = ["node_modules/**", "dist/**", "coverage/**", ".rep
 export function defaultConfig(profile: RepositoryProfile = "public"): ResolvedConfig {
   return {
     profile,
+    report: { formats: ["terminal", "markdown", "json"] },
     ignore: [...defaultIgnore],
     rules: {},
     ciFailOn: "error",
@@ -46,6 +53,11 @@ function resolveConfig(root: string, raw: z.infer<typeof rawConfigSchema>, profi
   const defaults = defaultConfig(profile);
   return {
     profile,
+    ...(raw.baseline ? { baseline: raw.baseline } : {}),
+    report: {
+      formats: (raw.report?.formats ?? ["terminal", "markdown", "json"]) as ReportFormat[],
+      ...(raw.report?.output_dir ? { outputDir: raw.report.output_dir } : {})
+    },
     ignore: [...defaults.ignore, ...(raw.ignore ?? [])],
     rules: raw.rules ?? {},
     ciFailOn: raw.ci?.fail_on ?? defaults.ciFailOn,

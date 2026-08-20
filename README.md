@@ -2,7 +2,7 @@
 
 ![RepoSentinel banner](docs/assets/reposentinel-banner.svg)
 
-[![Status: concept planning](https://img.shields.io/badge/status-concept--planning-38bdf8?style=for-the-badge&labelColor=07111f)](docs/ROADMAP_BETA_PRODUCTION.md)
+[![Status: beta candidate](https://img.shields.io/badge/status-beta--candidate-67e8f9?style=for-the-badge&labelColor=07111f)](docs/BETA_RELEASE.md)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RepoSentinel_Project_Context.md)
 [![Languages: EN%20%7C%20ID](https://img.shields.io/badge/languages-EN%20%7C%20ID-a78bfa?style=for-the-badge&labelColor=11102b)](docs/TECH_STACK_DECISIONS.md)
 
@@ -13,7 +13,7 @@
 
 </div>
 
-> **Important / Penting:** RepoSentinel is currently a **concept specification / MVP planning project**. The package, commands, GitHub Action, documentation URLs, and CLI screenshots in this repository describe the target product experience until implementation and verification are complete.
+> **Release status / Status rilis:** RepoSentinel is a verified **beta candidate**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, and documentation are implemented and validated. The beta package is available as GitHub prerelease `v0.1.0-beta.1`; pilot feedback and stable-release sign-off remain separate release activities.
 
 ---
 
@@ -23,7 +23,7 @@
 
 Good code can still look unready when the README is unclear, Quick Start is missing, demo links are broken, screenshots do not resolve, package metadata conflicts, `.env` enters Git, or contributors do not know where to begin.
 
-RepoSentinel is a planned developer tool that checks the layer around the code: **documentation, discoverability, links, assets, package hygiene, Git metadata, security hygiene, CI configuration, and contributor readiness**. It is designed to feel like a calm, actionable repository linter—not a wall of cryptic warnings.
+RepoSentinel is a local-first developer tool that checks the layer around the code: **documentation, discoverability, links, assets, package hygiene, Git metadata, security hygiene, CI configuration, and contributor readiness**. It is designed to feel like a calm, actionable repository linter—not a wall of cryptic warnings.
 
 ### What makes it different
 
@@ -49,40 +49,44 @@ CI & automation     workflow permissions · release metadata · syntax hints
 Portfolio profile   summary · tech stack · screenshot · visible demo
 ```
 
-### Target experience
+### Verified workflow
 
 ```text
 install → check → understand finding → fix → check again → share
 ```
 
-A successful interactive scan is designed to look like this:
+The current beta keeps the one-shot report deterministic and CI-safe. Interactive prompts are limited to `init`; terminal scan output is intentionally stable for copy, pipe, and regression testing.
 
 ```text
-◈ RepoSentinel 0.1.0  ·  portfolio-app
-  local scan · network off · locale en
+$ reposentinel check . --profile public --lang en
+
+◈ RepoSentinel
+  repository readiness, without the noise
 
 ╭─ health snapshot ─────────────────────────────────────────────╮
-│  86 / 100   ALMOST READY                                      │
-│  0 critical · 0 error · 2 warnings · 3 info                   │
+│ 100 / 100   READY                                           │
+│ 416 files · 3 ignored · threshold error                     │
 ╰────────────────────────────────────────────────────────────────╯
 
-  › ! documentation.quickstart   README.md:18       warning
-      README has no runnable installation command
-  ◇   links.valid                README.md:31       warning
-      Link could not be resolved
+Findings  ────────────────────────────────────────────────────────
+CRITICAL 0   ERROR 0   WARNING 0   INFO 0
+✓ No findings.
 
-  ↑↓ select · enter details · f filter · r rescan · o report · q quit
-
-  Result: passed with warnings                                      exit 0
+Score  : 100 / 100
+Status : ready
+Result : passed
+Exit code : 0
 ```
 
-### Sentinel Console in motion
+### Sentinel Console preview
 
-The terminal UI uses a dark navy canvas with a cyan-to-violet accent line, cyan panel borders, muted context text, yellow warnings, red errors, and cyan info markers. Color is forced in interactive mode and can always be disabled with `--no-color` for CI, pipes, SSH fallback, and machine output.
+The terminal UI uses a dark navy canvas with a cyan-to-violet accent line, cyan panel borders, muted context text, yellow warnings, red errors, and cyan info markers. Color is forced in interactive mode and can always be disabled with `--no-color` for CI, pipes, SSH fallback, and machine output. Static screenshots are the primary preview so the actual hierarchy and border geometry can be inspected without animation speed getting in the way.
 
-![RepoSentinel Sentinel Console demo](docs/assets/reposentinel-cli-demo.gif)
+![RepoSentinel ready-state terminal](docs/assets/reposentinel-terminal-ready.png)
 
-[Open the full MP4 terminal demo](docs/assets/reposentinel-cli-demo.mp4) · [View the warning-state screenshot](docs/assets/reposentinel-terminal-scan.png) · [View the 100/100 ready screenshot](docs/assets/reposentinel-terminal-ready.png)
+![RepoSentinel warning-state terminal](docs/assets/reposentinel-terminal-scan.png)
+
+[Open the optional MP4 demo](docs/assets/reposentinel-cli-demo.mp4)
 
 | Token | Tone | Meaning |
 |---|---|---|
@@ -94,11 +98,13 @@ The terminal UI uses a dark navy canvas with a cyan-to-violet accent line, cyan 
 
 ### Quick Start
 
-> **Current status:** the package is still under implementation. The commands below show the target user journey and will become executable as the CLI MVP is completed.
+> **Verified local path:** the commands below run from the repository workspace. The published beta artifact is linked in the release section below.
 
 ```bash
-# After the package is published
-npx reposentinel check . --lang en
+# Install the verified beta artifact from GitHub Releases
+npm install --global https://github.com/KittodGG/RepoSentinel/releases/download/v0.1.0-beta.1/reposentinel-0.1.0-beta.1.tgz
+reposentinel --version
+reposentinel check . --lang en
 
 # During local development
 pnpm install
@@ -106,9 +112,7 @@ pnpm build
 node packages/cli/dist/index.js check . --lang id
 ```
 
-### Target commands
-
-> These are **planned UX contracts**, not a claim that the package is already published.
+### Verified commands
 
 ```bash
 # One-shot local scan
@@ -128,6 +132,13 @@ reposentinel check . --format json --lang en > report.json
 
 # Export a Markdown report
 reposentinel report . --format markdown --output report.md
+
+# Export a SARIF report for code scanning integrations
+reposentinel report . --format sarif --output report.sarif
+
+# Create a baseline, then focus future scans on new findings
+reposentinel baseline create .
+reposentinel check . --format json
 
 # Explore rules and explain one rule
 reposentinel rules --category security --lang id
@@ -164,7 +175,10 @@ flowchart LR
 | CLI package | `implemented` as local development CLI |
 | GitHub Action | `implemented` as composite action and source-checkout workflow |
 | Dogfooding and hardening | `implemented` as local self-scan and safety gates |
-| npm publication | `planned` |
+| SARIF reporter | `implemented` and schema-validated |
+| Baseline flow | `implemented` as repository-local fingerprint suppression |
+| npm/package artifact | `beta candidate` `v0.1.0-beta.1` GitHub prerelease |
+| npm publication | `pending owner-approved registry publication` |
 | Beta production | `beta candidate published` as `v0.1.0-beta.1`; pilot sign-off pending |
 
 ### Safety boundaries
@@ -192,7 +206,7 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 
 Kode yang baik tetap dapat terlihat belum siap ketika README sulit dipahami, Quick Start tidak tersedia, link demo rusak, screenshot tidak tampil, metadata package tidak konsisten, `.env` ikut masuk Git, atau contributor tidak tahu harus mulai dari mana.
 
-RepoSentinel adalah rancangan developer tool untuk memeriksa lapisan di sekitar kode: **dokumentasi, discoverability, link, asset, package hygiene, metadata Git, security hygiene, konfigurasi CI, dan kesiapan contributor**. Pengalaman yang dituju adalah repository linter yang tenang dan actionable—bukan dinding warning yang sulit dipahami.
+RepoSentinel adalah developer tool local-first untuk memeriksa lapisan di sekitar kode: **dokumentasi, discoverability, link, asset, package hygiene, metadata Git, security hygiene, konfigurasi CI, dan kesiapan contributor**. Pengalaman yang dituju adalah repository linter yang tenang dan actionable—bukan dinding warning yang sulit dipahami.
 
 ### Prinsip produk
 
@@ -205,7 +219,7 @@ RepoSentinel adalah rancangan developer tool untuk memeriksa lapisan di sekitar 
 | **Safe by default** | Scanner membaca repository sebagai data dan tidak menjalankan package script atau build command. |
 | **Multilingual** | UI dan dokumentasi dapat diterjemahkan tanpa mengubah rule ID dan schema machine output. |
 
-### Bahasa yang direncanakan
+### Bahasa yang didukung
 
 MVP dimulai dengan **English (`en`)** dan **Bahasa Indonesia (`id`)**. Bahasa lain dapat ditambahkan melalui message catalog tanpa mengubah detector. Command, rule ID, configuration key, schema, dan exit code tetap memakai identifier teknis yang stabil agar script dan CI tidak rusak.
 
@@ -223,9 +237,15 @@ reposentinel report . --format markdown --output report.md --lang id
 
 ### Quick Start
 
-> **Status saat ini:** package masih dalam tahap implementasi. Command berikut menunjukkan alur target dan command development yang dapat digunakan setelah workspace disiapkan.
+> **Status terverifikasi:** workspace dan beta candidate sudah dapat dipasang, dibangun, diuji, serta dijalankan secara lokal pada Node.js 24.
 
 ```bash
+# Install the verified beta artifact
+npm install --global https://github.com/KittodGG/RepoSentinel/releases/download/v0.1.0-beta.1/reposentinel-0.1.0-beta.1.tgz
+reposentinel --version
+reposentinel check . --lang id
+
+# Or run from the workspace while contributing
 pnpm install
 pnpm build
 node packages/cli/dist/index.js check . --lang id
@@ -259,13 +279,15 @@ Lihat [roadmap lengkap](docs/ROADMAP_BETA_PRODUCTION.md) untuk pekerjaan satu pe
 
 Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, border panel cyan, metadata slate, warning kuning, error merah, dan info cyan. Pada terminal interaktif warna dipertahankan; gunakan `--no-color` untuk CI, pipe, SSH fallback, atau output machine.
 
-![Demo Sentinel Console RepoSentinel](docs/assets/reposentinel-cli-demo.gif)
+![Tampilan ready-state Sentinel Console RepoSentinel](docs/assets/reposentinel-terminal-ready.png)
 
-[Open demo MP4](docs/assets/reposentinel-cli-demo.mp4) · [Lihat screenshot warning](docs/assets/reposentinel-terminal-scan.png) · [Lihat screenshot 100/100 ready](docs/assets/reposentinel-terminal-ready.png)
+![Tampilan warning-state Sentinel Console RepoSentinel](docs/assets/reposentinel-terminal-scan.png)
+
+[Open optional demo MP4](docs/assets/reposentinel-cli-demo.mp4)
 
 ### Status saat ini
 
-Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, initial rule pack, local development CLI, reporter Markdown/JSON, GitHub Action, dogfooding, dan hardening gate sudah tersedia. Package `reposentinel` beta candidate `v0.1.0-beta.1` sudah diterbitkan sebagai GitHub prerelease; pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
+Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, initial rule pack, local development CLI, reporter Markdown/JSON/SARIF, baseline flow, GitHub Action, dogfooding, dan hardening gate sudah tersedia. Package `reposentinel` beta candidate `v0.1.0-beta.1` sudah diterbitkan sebagai GitHub prerelease; pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
 
 ---
 

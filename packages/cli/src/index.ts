@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
-import { basename, resolve } from "node:path";
-import { access, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import * as prompts from "@clack/prompts";
 import pc from "picocolors";
 import {
   createRepositoryContext,
+  filterBaselineFindings,
+  loadBaseline,
   summarizeFindings,
+  writeBaseline,
   type ExitThreshold,
   type Finding,
   type RepositoryProfile,
@@ -16,7 +19,7 @@ import {
 } from "@reposentinel/core";
 import { loadConfig } from "@reposentinel/config";
 import { rules as ruleDefinitions, runRules } from "@reposentinel/rules";
-import { renderJsonReport as renderJsonReportExternal, renderMarkdownReport as renderMarkdownReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
+import { renderJsonReport as renderJsonReportExternal, renderMarkdownReport as renderMarkdownReportExternal, renderSarifReport as renderSarifReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
 import {
   createTranslator,
   isSupportedLocale,
@@ -29,15 +32,16 @@ const VERSION = "0.1.0-beta.1";
 const profiles = ["public", "portfolio", "npm-package"] as const;
 const thresholds = ["critical", "error", "warning", "info"] as const;
 
-type OutputFormat = "terminal" | "json" | "markdown";
+type OutputFormat = "terminal" | "json" | "markdown" | "sarif";
 
 type CheckOptions = {
   profile: string;
   lang?: string;
   color?: boolean;
   failOn: string;
-  format: OutputFormat;
+  format?: OutputFormat;
   output?: string;
+  baseline?: string;
 };
 
 function explicitLocale(argv: string[]): string | undefined {
@@ -49,6 +53,15 @@ function explicitLocale(argv: string[]): string | undefined {
 
 function colorize(enabled: boolean, color: (value: string) => string, value: string): string {
   return enabled ? color(value) : value;
+}
+
+function resolveInsideRepository(root: string, candidate: string): string {
+  const resolved = resolve(root, candidate);
+  const relativePath = relative(root, resolved);
+  if (isAbsolute(relativePath) || relativePath === ".." || relativePath.startsWith(".." + "/") || relativePath.startsWith(".." + "\\")) {
+    throw new Error(`Configured report output directory must stay inside the repository: ${candidate}`);
+  }
+  return resolved;
 }
 
 function statusMessageKey(status: ScoreStatus): "status.ready" | "status.almostReady" | "status.needsAttention" | "status.notReady" {
@@ -132,49 +145,102 @@ function renderJson(
   }, null, 2)}\n`;
 }
 
-async function runCheck(locale: Locale, target: string, options: CheckOptions): Promise<number> {
-  const { t } = createTranslator(locale);
+type ScanData = {
+  root: string;
+  profile: RepositoryProfile;
+  threshold: ExitThreshold;
+  context: Awaited<ReturnType<typeof createRepositoryContext>>;
+  findings: Finding[];
+};
+
+async function collectScan(target: string, profile: RepositoryProfile, threshold: ExitThreshold, applyBaseline = true, baselineOverride?: string): Promise<ScanData> {
   const root = resolve(target);
-  const profile = options.profile as RepositoryProfile;
-  const threshold = options.failOn as ExitThreshold;
-
-  try {
-    await access(root);
-  } catch {
-    process.stderr.write(`${colorize(options.color !== false, pc.red, "×")} ${t("error.invalidPath", { path: root })}\n`);
-    return 2;
-  }
-
   const loaded = await loadConfig(root, profile);
   const config = { ...loaded.config, ciFailOn: threshold };
   const context = await createRepositoryContext(root, profile, config);
-  const findings = runRules(context);
-  const summary = summarizeFindings(findings, threshold);
-
-  const report = options.format === "json"
-    ? renderJsonReportExternal({ locale, repository: basename(root), profile, findings, threshold })
-    : options.format === "markdown"
-      ? renderMarkdownReportExternal({ locale, repository: basename(root), profile, findings, threshold })
-      : renderTerminalReportExternal({
-      locale,
-      repository: basename(root),
-      profile,
-      filesScanned: context.files.length,
-      ignoredCount: context.ignoredCount,
-      findings,
-      threshold,
-      color: options.color !== false
-    });
-  if (options.output) {
-    await writeFile(resolve(options.output), report, "utf8");
-    process.stderr.write(`Report written to ${resolve(options.output)}\n`);
-  } else {
-    process.stdout.write(report);
-  }
-  return summary.exitCode;
+  const rawFindings = runRules(context);
+  const baselinePath = baselineOverride ?? config.baseline ?? ".reposentinel/baseline.json";
+  const baseline = applyBaseline ? await loadBaseline(root, baselinePath) : new Set<string>();
+  return {
+    root,
+    profile,
+    threshold,
+    context,
+    findings: filterBaselineFindings(rawFindings, baseline)
+  };
 }
 
-async function runInit(locale: Locale, target: string, force: boolean): Promise<number> {
+async function runCheck(locale: Locale, target: string, options: CheckOptions): Promise<number> {
+  const profile = options.profile as RepositoryProfile;
+  const threshold = options.failOn as ExitThreshold;
+  const root = resolve(target);
+
+  try {
+    await access(root);
+    const scan = await collectScan(target, profile, threshold, true, options.baseline);
+    const summary = summarizeFindings(scan.findings, threshold);
+    const renderReport = (format: OutputFormat): string => format === "json"
+      ? renderJsonReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold })
+      : format === "markdown"
+        ? renderMarkdownReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold })
+        : format === "sarif"
+          ? renderSarifReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold })
+          : renderTerminalReportExternal({
+              locale,
+              repository: basename(scan.root),
+              profile,
+              filesScanned: scan.context.files.length,
+              ignoredCount: scan.context.ignoredCount,
+              findings: scan.findings,
+              threshold,
+              color: options.color !== false
+            });
+    if (options.output) {
+      const reportPath = resolve(options.output);
+      await mkdir(dirname(reportPath), { recursive: true });
+      await writeFile(reportPath, renderReport(options.format ?? "terminal"), "utf8");
+      process.stderr.write(`Report written to ${reportPath}\n`);
+    } else if (options.format) {
+      process.stdout.write(renderReport(options.format));
+    } else {
+      process.stdout.write(renderReport("terminal"));
+      const outputDir = scan.context.config.report?.outputDir;
+      if (outputDir) {
+        const reportDir = resolveInsideRepository(scan.root, outputDir);
+        await mkdir(reportDir, { recursive: true });
+        const configuredFormats = scan.context.config.report?.formats ?? ["terminal"];
+        const extensions: Record<OutputFormat, string> = { terminal: "txt", markdown: "md", json: "json", sarif: "sarif" };
+        for (const format of configuredFormats) {
+          await writeFile(resolve(reportDir, `reposentinel-report.${extensions[format]}`), renderReport(format), "utf8");
+        }
+        process.stderr.write(`Reports written to ${reportDir}\n`);
+      }
+    }
+    return summary.exitCode;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${colorize(options.color !== false, pc.red, "×")} ${message}\n`);
+    return 2;
+  }
+}
+
+function starterConfig(profile: RepositoryProfile): string {
+  return [
+    "extends: recommended",
+    `profile: ${profile}`,
+    "",
+    "security:",
+    "  network: false",
+    "  scan_history: false",
+    "  redact_findings: true",
+    "",
+    "ci:",
+    "  fail_on: error",
+    ""
+  ].join("\n");
+}
+
+async function runInit(locale: Locale, target: string, force: boolean, profile: RepositoryProfile): Promise<number> {
   const { t } = createTranslator(locale);
   const root = resolve(target);
   const configPath = resolve(root, ".reposentinel.yml");
@@ -188,33 +254,41 @@ async function runInit(locale: Locale, target: string, force: boolean): Promise<
     }
   }
   if (!process.stdin.isTTY || process.env.CI) {
-    process.stderr.write("Interactive init requires a TTY. Use --force with a prepared config in CI.\n");
-    return 2;
+    if (!force) {
+      process.stderr.write("Interactive init requires a TTY. Use --force to create a default config in CI.\n");
+      return 2;
+    }
+    await writeFile(configPath, starterConfig(profile), "utf8");
+    process.stdout.write(`${t("init.created", { path: configPath })}\n`);
+    return 0;
   }
   prompts.intro(t("init.title"));
   const selected = await prompts.select({
     message: t("init.profileQuestion"),
-    options: profiles.map((profile) => ({ value: profile, label: profile }))
+    options: profiles.map((value) => ({ value, label: value })),
+    initialValue: profile
   });
   if (prompts.isCancel(selected)) {
     prompts.cancel(t("init.cancelled"));
     return 130;
   }
-  await writeFile(configPath, [
-    "extends: recommended",
-    `profile: ${String(selected)}`,
-    "",
-    "security:",
-    "  network: false",
-    "  scan_history: false",
-    "  redact_findings: true",
-    "",
-    "ci:",
-    "  fail_on: error",
-    ""
-  ].join("\\n"), "utf8");
+  await writeFile(configPath, starterConfig(String(selected) as RepositoryProfile), "utf8");
   prompts.outro(t("init.created", { path: configPath }));
   return 0;
+}
+
+async function runBaselineCreate(locale: Locale, target: string, profile: RepositoryProfile, output?: string): Promise<number> {
+  const { t } = createTranslator(locale);
+  try {
+    const scan = await collectScan(target, profile, "error", false);
+    const path = await writeBaseline(scan.root, output ?? ".reposentinel/baseline.json", scan.findings);
+    process.stdout.write(`${t("baseline.created", { path, count: scan.findings.length })}\n`);
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${colorize(true, pc.red, "×")} ${message}\n`);
+    return 2;
+  }
 }
 
 function renderRules(locale: Locale, category?: string): string {
@@ -257,8 +331,9 @@ function buildProgram(locale: Locale): Command {
     .option("--profile <profile>", "Repository profile", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .option("--fail-on <severity>", "Exit threshold", "error")
-    .option("--format <format>", "Output format: terminal, markdown, json", "terminal")
+    .option("--format <format>", "Output format: terminal, markdown, json, sarif")
     .option("--output <file>", "Write the report to a file")
+    .option("--baseline <file>", "Baseline path relative to the repository root")
     .option("--no-color", "Disable ANSI color output")
     .action(async (target = ".", options: CheckOptions) => {
       if (!profiles.includes(options.profile as RepositoryProfile)) {
@@ -271,8 +346,8 @@ function buildProgram(locale: Locale): Command {
         process.exitCode = 2;
         return;
       }
-      if (options.format !== "terminal" && options.format !== "markdown" && options.format !== "json") {
-        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, markdown, json.\n`);
+      if (options.format && options.format !== "terminal" && options.format !== "markdown" && options.format !== "json" && options.format !== "sarif") {
+        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, markdown, json, sarif.\n`);
         process.exitCode = 2;
         return;
       }
@@ -301,10 +376,39 @@ function buildProgram(locale: Locale): Command {
     .command("init [path]")
     .description(t("cli.command.init"))
     .option("--force", "Replace an existing .reposentinel.yml")
+    .option("--profile <profile>", "Repository profile", "public")
     .option("--lang <locale>", t("cli.option.lang"))
-    .action(async (target = ".", options: { force?: boolean; lang?: string }) => {
+    .action(async (target = ".", options: { force?: boolean; profile?: string; lang?: string }) => {
+      const selectedProfile = options.profile ?? "public";
+      if (!profiles.includes(selectedProfile as RepositoryProfile)) {
+        process.stderr.write(`Unknown profile: ${selectedProfile}. Use: ${profiles.join(", ")}\n`);
+        process.exitCode = 2;
+        return;
+      }
       const selected = resolveLocale(options.lang ?? locale);
-      process.exitCode = await runInit(selected, target, options.force === true);
+      process.exitCode = await runInit(selected, target, options.force === true, selectedProfile as RepositoryProfile);
+    });
+
+  program
+    .command("baseline <action> [path]")
+    .description(t("cli.command.baseline"))
+    .option("--profile <profile>", "Repository profile", "public")
+    .option("--lang <locale>", t("cli.option.lang"))
+    .option("--output <file>", "Baseline output path", ".reposentinel/baseline.json")
+    .action(async (action: string, target = ".", options: { profile?: string; lang?: string; output?: string }) => {
+      if (action !== "create") {
+        process.stderr.write(`Unsupported baseline action: ${action}. Use: create.\n`);
+        process.exitCode = 2;
+        return;
+      }
+      const selectedProfile = options.profile ?? "public";
+      if (!profiles.includes(selectedProfile as RepositoryProfile)) {
+        process.stderr.write(`Unknown profile: ${selectedProfile}. Use: ${profiles.join(", ")}\n`);
+        process.exitCode = 2;
+        return;
+      }
+      const selected = resolveLocale(options.lang ?? locale);
+      process.exitCode = await runBaselineCreate(selected, target, selectedProfile as RepositoryProfile, options.output);
     });
 
   program

@@ -12,6 +12,7 @@ export type RuleCategory =
   | "portfolio";
 export type RepositoryProfile = "public" | "portfolio" | "npm-package";
 export type ExitThreshold = Severity;
+export type ReportFormat = "terminal" | "markdown" | "json" | "sarif";
 export type FileKind = "text" | "binary" | "symlink" | "directory";
 
 export type Finding = {
@@ -48,6 +49,11 @@ export type RepositoryContext = {
 
 export type ResolvedConfig = {
   profile: RepositoryProfile;
+  baseline?: string;
+  report?: {
+    formats: readonly ReportFormat[];
+    outputDir?: string;
+  };
   ignore: readonly string[];
   rules: Readonly<Record<string, Severity | "off">>;
   ciFailOn: ExitThreshold;
@@ -149,3 +155,5 @@ export function fingerprintFor(ruleId: string, path = "", line = 0): string {
 
 export { createRepositoryContext, discoverRepository } from "./discovery.js";
 export type { DiscoveryOptions, DiscoveryResult } from "./discovery.js";
+
+export { createBaselineDocument, filterBaselineFindings, loadBaseline, writeBaseline, BASELINE_SCHEMA } from "./baseline.js";

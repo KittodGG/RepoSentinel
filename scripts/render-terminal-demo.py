@@ -85,9 +85,10 @@ def render(lines: Iterable[str], output: Path, font_path: str, visible_lines: in
     draw.text((210, 82), "RepoSentinel", font=title_font, fill=TEXT)
     draw.text((210, 111), "Sentinel Console  /  terminal preview", font=small_font, fill=MUTED)
     badge = "LOCAL  ·  NETWORK OFF  ·  EN / ID"
-    badge_width = draw.textlength(badge, font=small_font)
-    draw.rounded_rectangle((WIDTH - 96 - badge_width, 86, WIDTH - 96, 116), radius=14, fill=(17, 56, 72), outline=(47, 162, 181))
-    draw.text((WIDTH - 81 - badge_width, 92), badge, font=small_font, fill=CYAN)
+    badge_left = WIDTH - 520
+    badge_right = WIDTH - 112
+    draw.rounded_rectangle((badge_left, 86, badge_right, 116), radius=14, fill=(17, 56, 72), outline=(47, 162, 181))
+    draw.text((badge_left + 15, 92), badge, font=small_font, fill=CYAN)
 
     y = 170
     line_height = 24
@@ -106,7 +107,7 @@ def render(lines: Iterable[str], output: Path, font_path: str, visible_lines: in
     footer_y = HEIGHT - 103
     draw.line((112, footer_y - 17, WIDTH - 112, footer_y - 17), fill=(27, 52, 80), width=1)
     draw.text((112, footer_y), "◈ scan complete", font=small_font, fill=CYAN)
-    draw.text((WIDTH - 355, footer_y), "↑↓ navigate   ? help   q quit", font=small_font, fill=MUTED)
+    draw.text((WIDTH - 525, footer_y), "terminal · json · markdown · sarif", font=small_font, fill=MUTED)
     image.save(output, optimize=True)
 
 

@@ -1,5 +1,7 @@
+import { execFile as execFileCallback } from "node:child_process";
 import { lstat, open, readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
+import { promisify } from "node:util";
 import ignore from "ignore";
 import type { RepositoryContext, RepositoryFile, RepositoryProfile, ResolvedConfig } from "./index.js";
 
@@ -14,6 +16,16 @@ export type DiscoveryResult = {
 };
 
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024;
+const execFile = promisify(execFileCallback);
+
+async function readTrackedPaths(root: string): Promise<ReadonlySet<string>> {
+  try {
+    const result = await execFile("git", ["-C", root, "ls-files", "--cached", "-z"], { maxBuffer: 4 * 1024 * 1024 });
+    return new Set(result.stdout.split("\0").filter(Boolean).map(toPosix));
+  } catch {
+    return new Set();
+  }
+}
 
 function toPosix(value: string): string {
   return value.split("\\").join("/");
@@ -34,6 +46,7 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
   const resolvedRoot = resolve(root);
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const matcher = ignore().add(config.ignore);
+  const trackedPaths = await readTrackedPaths(resolvedRoot);
   const files: RepositoryFile[] = [];
   const textCache = new Map<string, string>();
   let ignoredCount = 0;
@@ -52,11 +65,10 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
 
       const metadata = await lstat(absolutePath);
       if (entry.isSymbolicLink()) {
-        files.push({ relativePath, absolutePath, kind: "symlink", sizeBytes: metadata.size, isIgnored: false });
+        files.push({ relativePath, absolutePath, kind: "symlink", sizeBytes: metadata.size, isIgnored: false, isTracked: trackedPaths.has(relativePath) });
         continue;
       }
       if (entry.isDirectory()) {
-        files.push({ relativePath, absolutePath, kind: "directory", sizeBytes: 0, isIgnored: false });
         await visit(absolutePath);
         continue;
       }
@@ -64,7 +76,7 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
 
       const binary = metadata.size > maxFileBytes || await isBinary(absolutePath, maxFileBytes);
       const kind = binary ? "binary" : "text";
-      files.push({ relativePath, absolutePath, kind, sizeBytes: metadata.size, isIgnored: false });
+      files.push({ relativePath, absolutePath, kind, sizeBytes: metadata.size, isIgnored: false, isTracked: trackedPaths.has(relativePath) });
       if (kind === "text" && metadata.size <= maxFileBytes) {
         textCache.set(relativePath, await readFile(absolutePath, "utf8"));
       }

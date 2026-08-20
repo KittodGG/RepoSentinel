@@ -20,7 +20,7 @@ inputs:
     required: false
     default: error
   format:
-    description: "Report format: terminal, markdown, or json."
+    description: "Report format: terminal, markdown, json, or sarif."
     required: false
     default: markdown
   output:

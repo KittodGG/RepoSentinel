@@ -39,6 +39,19 @@ For a machine-readable CI artifact:
     output: artifacts/reposentinel-report.json
 ```
 
+For GitHub Code Scanning-compatible output:
+
+```yaml
+- name: Export SARIF findings
+  uses: KittodGG/RepoSentinel@main
+  with:
+    profile: public
+    lang: en
+    fail-on: error
+    format: sarif
+    output: artifacts/reposentinel-report.sarif
+```
+
 The action installs the action repository workspace with the pinned lockfile, builds the publishable `packages/cli` package, and executes its generated bundle. It is designed for source-checkout usage before the npm package is published.
 
 ## CI-safe behavior
@@ -54,11 +67,11 @@ A phase-10 change is not ready to merge until the following conditions hold:
 | Type safety | `pnpm typecheck` passes on Node.js 24. |
 | Regression suite | `pnpm test` passes, including core, discovery, localization, config, rules, and reporters. |
 | Build | `pnpm build` produces CLI and package declarations. |
-| Smoke report | `reposentinel check . --format json --lang en` emits `reposentinel.report/v1`. |
+| Smoke report | `reposentinel check . --format json --lang en` emits `reposentinel.report/v1`; SARIF emits version `2.1.0`. |
 | Action syntax | `action.yml` has valid inputs, composite steps, and no secret-dependent behavior. |
 | Permissions | Quality workflow declares read-only repository contents permission. |
 | Packaging | `pnpm pack:alpha` produces a clean artifact without unpublished `@reposentinel/*` runtime dependencies. |
 
 ## Known pre-beta limitations
 
-The action currently builds the CLI from the checked-out action repository rather than a registry-published version. Third-party action references use version tags during the initial phase; pinning them to reviewed commit SHAs is a hardening task before beta production. The action does not yet upload a report artifact automatically; the caller can add `actions/upload-artifact` after the scan step.
+The action currently builds the CLI from the checked-out action repository rather than a registry-published version. It supports terminal, Markdown, JSON, and SARIF output; baseline suppression is available when a repository-local `.reposentinel/baseline.json` is present. Third-party action references use version tags during the initial phase; pinning them to reviewed commit SHAs is a hardening task before beta production. The action does not yet upload a report artifact automatically; the caller can add `actions/upload-artifact` after the scan step.

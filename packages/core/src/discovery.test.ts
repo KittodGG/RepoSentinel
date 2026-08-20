@@ -1,9 +1,13 @@
+import { execFile as execFileCallback } from "node:child_process";
 import { mkdtemp, mkdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRepositoryContext } from "./discovery.js";
 import type { ResolvedConfig } from "./index.js";
+
+const execFile = promisify(execFileCallback);
 
 const config: ResolvedConfig = {
   profile: "public",
@@ -39,5 +43,18 @@ describe("safe discovery", () => {
     const link = context.files.find((file) => file.relativePath === "external");
     expect(link?.kind).toBe("symlink");
     expect(context.files.some((file) => file.relativePath.includes("secret.txt"))).toBe(false);
+  });
+
+  it("marks cached Git files and excludes directories from file counts", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-tracked-"));
+    await mkdir(join(root, "nested"));
+    await writeFile(join(root, ".env"), "TOKEN=synthetic");
+    await execFile("git", ["-C", root, "init", "--quiet"]);
+    await execFile("git", ["-C", root, "add", ".env"]);
+
+    const context = await createRepositoryContext(root, "public", config);
+    const envFile = context.files.find((file) => file.relativePath === ".env");
+    expect(envFile?.isTracked).toBe(true);
+    expect(context.files.some((file) => file.kind === "directory")).toBe(false);
   });
 });
