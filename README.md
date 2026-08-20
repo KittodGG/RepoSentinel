@@ -136,9 +136,9 @@ flowchart LR
 | Bilingual README direction | `implemented` as documentation |
 | CLI visual interaction specification | `implemented` as documentation |
 | Multilingual architecture decision | `implemented` as documentation |
-| Core engine | `planned` |
-| Rule pack | `planned` |
-| CLI package | `planned` |
+| Core engine | `implemented` as deterministic development foundation |
+| Rule pack | `implemented` as initial 16-rule pack |
+| CLI package | `implemented` as local development CLI |
 | GitHub Action | `planned` |
 | npm publication | `planned` |
 | Beta production | `planned` |
@@ -229,7 +229,7 @@ Lihat [roadmap lengkap](docs/ROADMAP_BETA_PRODUCTION.md) untuk pekerjaan satu pe
 
 ### Status saat ini
 
-Repository ini baru berada pada tahap **fondasi dokumentasi dan perencanaan implementasi**. README, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, dan PR template sudah disiapkan. Core engine, rule pack, package npm, dan GitHub Action masih berstatus `planned` sampai benar-benar dibangun, diuji, dan diverifikasi.
+Repository ini sudah melewati tahap fondasi dokumentasi dan mulai memasuki implementasi core. README, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, initial rule pack, dan local development CLI sudah tersedia. Package npm yang dipublikasikan, GitHub Action, reporter Markdown/SARIF, serta beta production masih berstatus `planned` sampai benar-benar dikemas, diuji, dan diverifikasi.
 
 ---
 

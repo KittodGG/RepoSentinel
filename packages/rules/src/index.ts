@@ -251,6 +251,158 @@ export const rules: readonly RuleDefinition[] = [
             remediation: "Decide whether the repository should be open source and add an appropriate license after review."
           })];
     }
+  },
+  {
+    id: "links.valid",
+    category: "links",
+    title: "Markdown links resolve",
+    defaultSeverity: "warning",
+    profiles: ["public", "portfolio", "npm-package"],
+    run(context) {
+      const findings: Finding[] = [];
+      const linkPattern = /!?\[[^\]]*\]\(([^)]+)\)/gu;
+      for (const [sourcePath, source] of context.textCache.entries()) {
+        if (!sourcePath.toLowerCase().endsWith(".md")) continue;
+        for (const match of source.matchAll(linkPattern)) {
+          const target = match[1]?.trim().split(/\s+/u)[0] ?? "";
+          if (!target || target.startsWith("#") || target.startsWith("mailto:")) continue;
+          if (/^https?:\/\//iu.test(target)) {
+            try { new URL(target); } catch {
+              findings.push(finding(this, context, {
+                path: sourcePath,
+                message: "Markdown link has an invalid URL.",
+                evidence: target,
+                remediation: "Replace the URL with a valid absolute URL or remove the link."
+              }));
+            }
+            continue;
+          }
+          const normalized = target.split("#")[0]?.replace(/^\.\//u, "") ?? "";
+          const sourceDirectory = sourcePath.includes("/") ? `${sourcePath.slice(0, sourcePath.lastIndexOf("/") + 1)}${normalized}` : normalized;
+          const exists = context.files.some((file) => file.relativePath === sourceDirectory || file.relativePath === normalized);
+          if (!exists) {
+            findings.push(finding(this, context, {
+              path: sourcePath,
+              message: "Markdown link points to a missing repository path.",
+              evidence: target,
+              remediation: "Create the referenced file or update the link to a path that exists."
+            }));
+          }
+        }
+      }
+      return findings;
+    }
+  },
+  {
+    id: "images.resolve",
+    category: "links",
+    title: "Markdown images resolve",
+    defaultSeverity: "warning",
+    profiles: ["public", "portfolio"],
+    run(context) {
+      const findings: Finding[] = [];
+      const imagePattern = /!\[[^\]]*\]\(([^)]+)\)/gu;
+      for (const [sourcePath, source] of context.textCache.entries()) {
+        if (!sourcePath.toLowerCase().endsWith(".md")) continue;
+        for (const match of source.matchAll(imagePattern)) {
+          const target = match[1]?.trim().split(/\s+/u)[0] ?? "";
+          if (!target || /^https?:\/\//iu.test(target) || target.startsWith("data:")) continue;
+          const normalized = target.split("#")[0]?.replace(/^\.\//u, "") ?? "";
+          const sourceDirectory = sourcePath.includes("/") ? `${sourcePath.slice(0, sourcePath.lastIndexOf("/") + 1)}${normalized}` : normalized;
+          if (!context.files.some((file) => file.relativePath === sourceDirectory || file.relativePath === normalized)) {
+            findings.push(finding(this, context, {
+              path: sourcePath,
+              message: "Markdown image points to a missing repository asset.",
+              evidence: target,
+              remediation: "Add the asset at the referenced path or update the image reference."
+            }));
+          }
+        }
+      }
+      return findings;
+    }
+  },
+  {
+    id: "badges.resolve",
+    category: "links",
+    title: "Badges use valid URLs",
+    defaultSeverity: "info",
+    profiles: ["public", "portfolio", "npm-package"],
+    run(context) {
+      const findings: Finding[] = [];
+      const imagePattern = /!\[[^\]]*\]\(([^)]+)\)/gu;
+      for (const [path, source] of context.textCache.entries()) {
+        if (!path.toLowerCase().endsWith(".md")) continue;
+        for (const match of source.matchAll(imagePattern)) {
+          const target = match[1]?.trim().split(/\s+/u)[0] ?? "";
+          if (!/badge|shield|status/iu.test(target)) continue;
+          if (!/^https?:\/\//iu.test(target)) {
+            findings.push(finding(this, context, {
+              severity: "warning",
+              path,
+              message: "Badge image does not use an absolute URL.",
+              evidence: target,
+              remediation: "Use a valid HTTPS badge endpoint or remove the badge."
+            }));
+          }
+        }
+      }
+      return findings;
+    }
+  },
+  {
+    id: "portfolio.demo-visible",
+    category: "portfolio",
+    title: "Portfolio demo is visible",
+    defaultSeverity: "warning",
+    profiles: ["portfolio"],
+    run(context) {
+      const readme = context.textCache.get("README.md") ?? "";
+      const visible = /(^|\n)#+\s*(live\s+demo|demo|preview)\b/iu.test(readme) || /https?:\/\/[^\s)]+/iu.test(readme) || context.files.some((file) => /(^|\/)(demo|preview)(\/|\.|$)/iu.test(file.relativePath));
+      return visible
+        ? []
+        : [finding(this, context, {
+            path: "README.md",
+            message: "No visible demo, preview, or live URL was detected for the portfolio profile.",
+            remediation: "Add a Demo or Preview section near the top of README.md."
+          })];
+    }
+  },
+  {
+    id: "community.issue-template",
+    category: "community",
+    title: "Issue template is available",
+    defaultSeverity: "info",
+    profiles: ["public"],
+    run(context) {
+      const present = fileExists(context, ".github/ISSUE_TEMPLATE.md") || context.files.some((file) => file.relativePath.startsWith(".github/ISSUE_TEMPLATE/"));
+      return present
+        ? []
+        : [finding(this, context, {
+            message: "No issue template was detected.",
+            remediation: "Add an issue template when accepting public bug reports or feature requests."
+          })];
+    }
+  },
+  {
+    id: "ci.workflow-permissions",
+    category: "ci",
+    title: "Workflow permissions are explicit",
+    defaultSeverity: "warning",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      const workflowPaths = context.files.filter((file) => /^\.github\/workflows\/[^/]+\.(yml|yaml)$/u.test(file.relativePath));
+      return workflowPaths.flatMap((file) => {
+        const source = context.textCache.get(file.relativePath) ?? "";
+        return /(^|\n)permissions\s*:/mu.test(source)
+          ? []
+          : [finding(this, context, {
+              path: file.relativePath,
+              message: "Workflow does not declare an explicit permissions block.",
+              remediation: "Add least-privilege permissions at workflow or job scope."
+            })];
+      });
+    }
   }
 ];
 

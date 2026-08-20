@@ -35,6 +35,9 @@ importers:
       '@reposentinel/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@reposentinel/reporters':
+        specifier: workspace:*
+        version: link:../reporters
       '@reposentinel/rules':
         specifier: workspace:*
         version: link:../rules
@@ -103,6 +106,31 @@ importers:
         version: 3.2.7(@types/node@24.13.3)(tsx@4.23.12)(yaml@2.9.0)
 
   packages/i18n: {}
+
+  packages/reporters:
+    dependencies:
+      '@reposentinel/core':
+        specifier: workspace:*
+        version: link:../core
+      '@reposentinel/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.1(postcss@8.5.26)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@24.13.3)(tsx@4.23.12)(yaml@2.9.0)
 
   packages/rules:
     dependencies:

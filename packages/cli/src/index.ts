@@ -15,6 +15,7 @@ import {
 } from "@reposentinel/core";
 import { loadConfig } from "@reposentinel/config";
 import { runRules } from "@reposentinel/rules";
+import { renderJsonReport as renderJsonReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
 import {
   createTranslator,
   isSupportedLocale,
@@ -149,9 +150,18 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
   const summary = summarizeFindings(findings, threshold);
 
   if (options.format === "json") {
-    process.stdout.write(renderJson(locale, root, profile, findings, threshold));
+    process.stdout.write(renderJsonReportExternal({ locale, repository: basename(root), profile, findings, threshold }));
   } else {
-    process.stdout.write(renderTerminal(locale, root, profile, context.ignoredCount, context.files.length, findings, threshold, options.color !== false));
+    process.stdout.write(renderTerminalReportExternal({
+      locale,
+      repository: basename(root),
+      profile,
+      filesScanned: context.files.length,
+      ignoredCount: context.ignoredCount,
+      findings,
+      threshold,
+      color: options.color !== false
+    }));
   }
   return summary.exitCode;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RepositoryContext, RepositoryFile, ResolvedConfig } from "@reposentinel/core";
-import { enabledRules, runRules } from "./index.js";
+import { enabledRules, rules, runRules } from "./index.js";
 
 function file(relativePath: string, kind: RepositoryFile["kind"] = "text"): RepositoryFile {
   return {
@@ -62,6 +62,10 @@ describe("rules", () => {
     expect(result.some((finding) => finding.ruleId === "security.credential-pattern")).toBe(true);
     expect(JSON.stringify(result)).not.toContain("1234567890abcdef");
     expect(JSON.stringify(result)).not.toContain("secret material");
+  });
+
+  it("keeps the MVP rule pack at or above fifteen rules", () => {
+    expect(rules.length).toBeGreaterThanOrEqual(15);
   });
 
   it("runs npm-package rules only for npm-package profile", () => {
