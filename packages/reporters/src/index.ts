@@ -21,6 +21,10 @@ function colorize(enabled: boolean, color: (value: string) => string, value: str
   return enabled ? color(value) : value;
 }
 
+function code(value: string): string {
+  return "`" + value + "`";
+}
+
 export type TerminalReportOptions = {
   locale: Locale;
   repository: string;
@@ -73,6 +77,47 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
 
   output.push("", `${t("scan.score")}  : ${summary.score} / 100`, `${t("scan.status")} : ${status}`, `${t("scan.result")} : ${resultLabel}`, `Exit code : ${summary.exitCode}`);
   return `${output.join("\n")}\n`;
+}
+
+export function renderMarkdownReport(options: Omit<TerminalReportOptions, "color" | "filesScanned" | "ignoredCount">): string {
+  const summary = summarizeFindings(options.findings, options.threshold);
+  const rows = [
+    ["Critical", summary.counts.critical],
+    ["Error", summary.counts.error],
+    ["Warning", summary.counts.warning],
+    ["Info", summary.counts.info]
+  ].map(([label, count]) => `| ${label} | ${count} |`).join("\n");
+  const findings = options.findings.length === 0
+    ? "No findings."
+    : options.findings.map((finding) => [
+        `### ${code(finding.ruleId)} — ${finding.severity}`,
+        "",
+        `- Path: ${code(finding.path ?? "repository")}${finding.line ? `:${finding.line}` : ""}`,
+        `- Message: ${finding.message}`,
+        finding.evidence ? `- Evidence: ${finding.evidence}` : "",
+        `- Remediation: ${finding.remediation}`,
+        ""
+      ].filter(Boolean).join("\n")).join("\n");
+  return [
+    "# RepoSentinel Report",
+    "",
+    `- Repository: ${code(options.repository)}`,
+    `- Profile: ${code(options.profile)}`,
+    `- Locale: ${code(options.locale)}`,
+    `- Score: ${code(`${summary.score} / 100`)}`,
+    `- Status: ${code(summary.status)}`,
+    "",
+    "## Summary",
+    "",
+    "| Severity | Count |",
+    "|---|---:|",
+    rows,
+    "",
+    "## Findings",
+    "",
+    findings,
+    ""
+  ].join("\n");
 }
 
 export function renderJsonReport(options: Omit<TerminalReportOptions, "color" | "filesScanned" | "ignoredCount">): string {

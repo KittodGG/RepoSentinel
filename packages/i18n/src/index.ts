@@ -10,6 +10,19 @@ export type MessageKey =
   | "cli.usage"
   | "cli.command.check"
   | "cli.command.lang"
+  | "cli.command.init"
+  | "cli.command.rules"
+  | "cli.command.explain"
+  | "init.title"
+  | "init.profileQuestion"
+  | "init.created"
+  | "init.cancelled"
+  | "rules.header"
+  | "explain.notFound"
+  | "explain.header"
+  | "explain.severity"
+  | "explain.category"
+  | "explain.remediation"
   | "cli.option.lang"
   | "scan.started"
   | "scan.completed"
@@ -50,6 +63,20 @@ const catalogs: Record<Locale, Catalog> = {
     "cli.usage": "Usage: reposentinel <command> [options]",
     "cli.command.check": "Scan a repository",
     "cli.command.lang": "List or inspect supported UI languages",
+    "cli.command.init": "Create a starter configuration",
+    "cli.command.rules": "List enabled repository rules",
+    "cli.command.explain": "Explain a repository rule",
+    "init.title": "RepoSentinel setup",
+    "init.profileQuestion": "Which repository profile should be used?",
+    "init.created": ({ path }) => `Configuration created at ${path}`,
+    "init.cancelled": "Setup cancelled.",
+    "rules.header": "Enabled rules",
+    "explain.notFound": ({ ruleId }) => `Rule not found: ${ruleId}`,
+    "explain.header": ({ ruleId }) => `Rule explanation: ${ruleId}`,
+    "explain.severity": "Default severity",
+    "explain.category": "Category",
+    "explain.remediation": "Remediation",
+
     "cli.option.lang": "UI language: en or id",
     "scan.started": "Scan started",
     "scan.completed": "Scan completed",
@@ -85,6 +112,20 @@ const catalogs: Record<Locale, Catalog> = {
     "cli.usage": "Penggunaan: reposentinel <command> [options]",
     "cli.command.check": "Memindai repository",
     "cli.command.lang": "Menampilkan atau memeriksa bahasa UI yang tersedia",
+    "cli.command.init": "Membuat konfigurasi awal",
+    "cli.command.rules": "Menampilkan rule repository yang aktif",
+    "cli.command.explain": "Menjelaskan sebuah rule repository",
+    "init.title": "Setup RepoSentinel",
+    "init.profileQuestion": "Profile repository mana yang digunakan?",
+    "init.created": ({ path }) => `Konfigurasi dibuat di ${path}`,
+    "init.cancelled": "Setup dibatalkan.",
+    "rules.header": "Rule yang aktif",
+    "explain.notFound": ({ ruleId }) => `Rule tidak ditemukan: ${ruleId}`,
+    "explain.header": ({ ruleId }) => `Penjelasan rule: ${ruleId}`,
+    "explain.severity": "Severity default",
+    "explain.category": "Kategori",
+    "explain.remediation": "Remediation",
+
     "cli.option.lang": "Bahasa UI: en atau id",
     "scan.started": "Scan dimulai",
     "scan.completed": "Scan selesai",

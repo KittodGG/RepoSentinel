@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { basename, resolve } from "node:path";
-import { access } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
+import * as prompts from "@clack/prompts";
 import pc from "picocolors";
 import {
   createRepositoryContext,
@@ -14,8 +15,8 @@ import {
   type ScoreStatus
 } from "@reposentinel/core";
 import { loadConfig } from "@reposentinel/config";
-import { runRules } from "@reposentinel/rules";
-import { renderJsonReport as renderJsonReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
+import { rules as ruleDefinitions, runRules } from "@reposentinel/rules";
+import { renderJsonReport as renderJsonReportExternal, renderMarkdownReport as renderMarkdownReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
 import {
   createTranslator,
   isSupportedLocale,
@@ -28,7 +29,7 @@ const VERSION = "0.1.0-dev.1";
 const profiles = ["public", "portfolio", "npm-package"] as const;
 const thresholds = ["critical", "error", "warning", "info"] as const;
 
-type OutputFormat = "terminal" | "json";
+type OutputFormat = "terminal" | "json" | "markdown";
 
 type CheckOptions = {
   profile: string;
@@ -36,6 +37,7 @@ type CheckOptions = {
   color?: boolean;
   failOn: string;
   format: OutputFormat;
+  output?: string;
 };
 
 function explicitLocale(argv: string[]): string | undefined {
@@ -149,10 +151,11 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
   const findings = runRules(context);
   const summary = summarizeFindings(findings, threshold);
 
-  if (options.format === "json") {
-    process.stdout.write(renderJsonReportExternal({ locale, repository: basename(root), profile, findings, threshold }));
-  } else {
-    process.stdout.write(renderTerminalReportExternal({
+  const report = options.format === "json"
+    ? renderJsonReportExternal({ locale, repository: basename(root), profile, findings, threshold })
+    : options.format === "markdown"
+      ? renderMarkdownReportExternal({ locale, repository: basename(root), profile, findings, threshold })
+      : renderTerminalReportExternal({
       locale,
       repository: basename(root),
       profile,
@@ -161,9 +164,80 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
       findings,
       threshold,
       color: options.color !== false
-    }));
+    });
+  if (options.output) {
+    await writeFile(resolve(options.output), report, "utf8");
+    process.stderr.write(`Report written to ${resolve(options.output)}\n`);
+  } else {
+    process.stdout.write(report);
   }
   return summary.exitCode;
+}
+
+async function runInit(locale: Locale, target: string, force: boolean): Promise<number> {
+  const { t } = createTranslator(locale);
+  const root = resolve(target);
+  const configPath = resolve(root, ".reposentinel.yml");
+  if (!force) {
+    try {
+      await access(configPath);
+      process.stderr.write(`Configuration already exists at ${configPath}. Use --force to replace it.\n`);
+      return 2;
+    } catch {
+      // The file does not exist; continue with the wizard.
+    }
+  }
+  if (!process.stdin.isTTY || process.env.CI) {
+    process.stderr.write("Interactive init requires a TTY. Use --force with a prepared config in CI.\n");
+    return 2;
+  }
+  prompts.intro(t("init.title"));
+  const selected = await prompts.select({
+    message: t("init.profileQuestion"),
+    options: profiles.map((profile) => ({ value: profile, label: profile }))
+  });
+  if (prompts.isCancel(selected)) {
+    prompts.cancel(t("init.cancelled"));
+    return 130;
+  }
+  await writeFile(configPath, [
+    "extends: recommended",
+    `profile: ${String(selected)}`,
+    "",
+    "security:",
+    "  network: false",
+    "  scan_history: false",
+    "  redact_findings: true",
+    "",
+    "ci:",
+    "  fail_on: error",
+    ""
+  ].join("\\n"), "utf8");
+  prompts.outro(t("init.created", { path: configPath }));
+  return 0;
+}
+
+function renderRules(locale: Locale, category?: string): string {
+  const { t } = createTranslator(locale);
+  const selected = ruleDefinitions.filter((rule) => !category || rule.category === category);
+  const lines = [`${t("rules.header")} (${selected.length})`, ""];
+  for (const rule of selected) lines.push(`  ${rule.id.padEnd(34)} ${rule.defaultSeverity.padEnd(8)} ${rule.category}`);
+  return `${lines.join("\n")}\n`;
+}
+
+function renderRuleExplanation(locale: Locale, ruleId: string): string | undefined {
+  const { t } = createTranslator(locale);
+  const rule = ruleDefinitions.find((candidate) => candidate.id === ruleId);
+  if (!rule) return undefined;
+  return [
+    t("explain.header", { ruleId: rule.id }),
+    "",
+    `${rule.title}`,
+    `${t("explain.category")}: ${rule.category}`,
+    `${t("explain.severity")}: ${rule.defaultSeverity}`,
+    `Profiles: ${rule.profiles.join(", ")}`,
+    `${t("explain.remediation")}: see finding-specific remediation in the report.`
+  ].join("\n") + "\n";
 }
 
 function buildProgram(locale: Locale): Command {
@@ -178,11 +252,13 @@ function buildProgram(locale: Locale): Command {
 
   program
     .command("check [path]")
+    .alias("report")
     .description(t("cli.command.check"))
     .option("--profile <profile>", "Repository profile", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .option("--fail-on <severity>", "Exit threshold", "error")
-    .option("--format <format>", "Output format", "terminal")
+    .option("--format <format>", "Output format: terminal, markdown, json", "terminal")
+    .option("--output <file>", "Write the report to a file")
     .option("--no-color", "Disable ANSI color output")
     .action(async (target = ".", options: CheckOptions) => {
       if (!profiles.includes(options.profile as RepositoryProfile)) {
@@ -195,8 +271,8 @@ function buildProgram(locale: Locale): Command {
         process.exitCode = 2;
         return;
       }
-      if (options.format !== "terminal" && options.format !== "json") {
-        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, json.\n`);
+      if (options.format !== "terminal" && options.format !== "markdown" && options.format !== "json") {
+        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, markdown, json.\n`);
         process.exitCode = 2;
         return;
       }
@@ -219,6 +295,41 @@ function buildProgram(locale: Locale): Command {
       for (const supported of supportedLocales) {
         process.stdout.write(`${supported === selected ? "›" : " "} ${supported}\n`);
       }
+    });
+
+  program
+    .command("init [path]")
+    .description(t("cli.command.init"))
+    .option("--force", "Replace an existing .reposentinel.yml")
+    .option("--lang <locale>", t("cli.option.lang"))
+    .action(async (target = ".", options: { force?: boolean; lang?: string }) => {
+      const selected = resolveLocale(options.lang ?? locale);
+      process.exitCode = await runInit(selected, target, options.force === true);
+    });
+
+  program
+    .command("rules")
+    .description(t("cli.command.rules"))
+    .option("--category <category>", "Filter by rule category")
+    .option("--lang <locale>", t("cli.option.lang"))
+    .action((options: { category?: string; lang?: string }) => {
+      const selected = resolveLocale(options.lang ?? locale);
+      process.stdout.write(renderRules(selected, options.category));
+    });
+
+  program
+    .command("explain <ruleId>")
+    .description(t("cli.command.explain"))
+    .option("--lang <locale>", t("cli.option.lang"))
+    .action((ruleId: string, options: { lang?: string }) => {
+      const selected = resolveLocale(options.lang ?? locale);
+      const explanation = renderRuleExplanation(selected, ruleId);
+      if (!explanation) {
+        process.stderr.write(`${createTranslator(selected).t("explain.notFound", { ruleId })}\n`);
+        process.exitCode = 2;
+        return;
+      }
+      process.stdout.write(explanation);
     });
 
   return program;

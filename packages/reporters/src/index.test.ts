@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Finding } from "@reposentinel/core";
-import { renderJsonReport, renderTerminalReport } from "./index.js";
+import { renderJsonReport, renderMarkdownReport, renderTerminalReport } from "./index.js";
 
 const warning: Finding = {
   ruleId: "documentation.quickstart",
@@ -30,6 +30,20 @@ describe("reporters", () => {
     expect(output).toContain("SIAP");
     expect(output).toContain("documentation.quickstart");
     expect(output).not.toContain("\\u001b[");
+  });
+
+  it("renders Markdown with a summary table and finding section", () => {
+    const output = renderMarkdownReport({
+      locale: "en",
+      repository: "fixture",
+      profile: "public",
+      findings: [warning],
+      threshold: "error"
+    });
+    expect(output).toContain("# RepoSentinel Report");
+    expect(output).toContain("| Warning | 1 |");
+    expect(output).toContain("### `documentation.quickstart`");
+    expect(output).not.toContain("\\\\n");
   });
 
   it("renders machine JSON without ANSI escape sequences", () => {

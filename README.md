@@ -109,6 +109,13 @@ reposentinel explain documentation.quickstart --lang id
 
 # Export a machine-readable report
 reposentinel check . --format json --lang en > report.json
+
+# Export a Markdown report
+reposentinel report . --format markdown --output report.md
+
+# Explore rules and explain one rule
+reposentinel rules --category security --lang id
+reposentinel explain security.private-key --lang id
 ```
 
 The target language resolution order is `--lang`, `REPOSENTINEL_LANG`, config, interactive environment hint, then deterministic English fallback. Rule IDs, config keys, JSON keys, exit codes, and schema version stay stable across languages.
@@ -191,6 +198,10 @@ reposentinel check . --profile portfolio --lang id
 
 # Bahasa English untuk CI yang deterministik
 CI=true reposentinel check . --lang en --format json
+
+# Jelajahi rule dan buat report Markdown
+reposentinel rules --category security --lang id
+reposentinel report . --format markdown --output report.md --lang id
 ```
 
 ### Quick Start
