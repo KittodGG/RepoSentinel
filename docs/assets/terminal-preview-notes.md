@@ -1,0 +1,3 @@
+# Terminal Preview Visual Check
+
+The final RepoSentinel terminal preview uses a dark navy panel with a cyan-to-violet top accent, cyan panel borders, muted slate context text, yellow warning markers, red severity labels, cyan info labels, and green success state. The corrected box-row renderer pads content before applying ANSI colors, so the health snapshot's right border remains aligned in both colored and `--no-color` output. The warning-state screenshot fits all four findings, score, status, exit code, and footer controls inside the 1680×1180 canvas. The ready-state screenshot shows the 100/100 self-scan with zero findings and the same visual hierarchy. The animated GIF and MP4 are rendered from the real CLI output using progressive frames.

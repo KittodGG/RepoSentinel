@@ -1,4 +1,4 @@
-import pc from "picocolors";
+import { createColors } from "picocolors";
 import {
   summarizeFindings,
   type ExitThreshold,
@@ -39,40 +39,42 @@ export type TerminalReportOptions = {
 
 export function renderTerminalReport(options: TerminalReportOptions): string {
   const { locale, repository, profile, filesScanned, ignoredCount, findings, threshold, color = true } = options;
+  const colors = createColors(color);
   const { t } = createTranslator(locale);
   const summary = summarizeFindings(findings, threshold);
-  const scoreColor = summary.score >= 90 ? pc.green : summary.score >= 75 ? pc.cyan : pc.yellow;
+  const scoreColor = summary.score >= 90 ? colors.green : summary.score >= 75 ? colors.cyan : colors.yellow;
   const status = t(statusMessageKey(summary.status));
   const resultLabel = summary.exitCode === 1 ? t("result.failed") : summary.counts.warning > 0 ? t("result.passedWithWarnings") : t("result.passed");
-  const line = colorize(color, pc.dim, "──────────────────────────────────────────────────────────────");
+  const line = colors.dim("──────────────────────────────────────────────────────────────");
+  const boxRow = (value: string): string => `│ ${value}`.padEnd(63, " ") + "│";
   const output = [
-    colorize(color, pc.cyan, "◈ RepoSentinel"),
-    colorize(color, pc.dim, `  ${t("brand.tagline")}`),
+    `${colors.cyan("◈")} ${colors.bold(colors.white("RepoSentinel"))}`,
+    colors.dim(`  ${t("brand.tagline")}`),
     "",
     `${t("scan.repository")} : ${repository}`,
     `${t("scan.profile")}    : ${profile}`,
     `${t("scan.mode")}       : local · network off · locale ${locale}`,
     "",
-    colorize(color, pc.dim, "╭─ health snapshot ─────────────────────────────────────────────╮"),
-    `│  ${colorize(color, scoreColor, `${summary.score} / 100`)}   ${status.toUpperCase()}`.padEnd(64, " ") + "│",
-    `│  ${colorize(color, pc.dim, `${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`)}`.padEnd(64, " ") + "│",
-    colorize(color, pc.dim, "╰────────────────────────────────────────────────────────────────╯"),
+    colors.blue("╭─ health snapshot ─────────────────────────────────────────────╮"),
+    scoreColor(boxRow(`${summary.score} / 100   ${status.toUpperCase()}`)),
+    colors.dim(boxRow(`${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`)),
+    colors.blue("╰────────────────────────────────────────────────────────────────╯"),
     "",
     `${t("scan.findings")}  ${line}`,
-    `${colorize(color, pc.red, "CRITICAL")} ${summary.counts.critical}   ${colorize(color, pc.red, "ERROR")} ${summary.counts.error}   ${colorize(color, pc.yellow, "WARNING")} ${summary.counts.warning}   ${colorize(color, pc.blue, "INFO")} ${summary.counts.info}`
+    `${colors.red("CRITICAL")} ${summary.counts.critical}   ${colors.red("ERROR")} ${summary.counts.error}   ${colors.yellow("WARNING")} ${summary.counts.warning}   ${colors.cyan("INFO")} ${summary.counts.info}`
   ];
 
   if (findings.length === 0) {
-    output.push(colorize(color, pc.green, `✓ ${t("scan.noFindings")}`));
+    output.push(colors.green(`✓ ${t("scan.noFindings")}`));
   } else {
     for (const finding of findings) {
       const marker = finding.severity === "critical" || finding.severity === "error" ? "×" : finding.severity === "warning" ? "!" : "◇";
-      const markerColor = finding.severity === "critical" || finding.severity === "error" ? pc.red : finding.severity === "warning" ? pc.yellow : pc.blue;
+      const markerColor = finding.severity === "critical" || finding.severity === "error" ? colors.red : finding.severity === "warning" ? colors.yellow : colors.cyan;
       const location = finding.path ? `${finding.path}${finding.line ? `:${finding.line}` : ""}` : "repository";
       output.push("", `${colorize(color, markerColor, marker)}  ${finding.ruleId}  ${location}  ${finding.severity}`);
       output.push(`   ${finding.message}`);
-      if (finding.evidence) output.push(`   ${colorize(color, pc.dim, `Evidence: ${finding.evidence}`)}`);
-      output.push(`   ${colorize(color, pc.dim, `Fix: ${finding.remediation}`)}`);
+      if (finding.evidence) output.push(`   ${colors.dim(`Evidence: ${finding.evidence}`)}`);
+      output.push(`   ${colors.dim(`Fix: ${finding.remediation}`)}`);
     }
   }
 

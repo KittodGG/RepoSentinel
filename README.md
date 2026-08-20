@@ -76,6 +76,22 @@ A successful interactive scan is designed to look like this:
   Result: passed with warnings                                      exit 0
 ```
 
+### Sentinel Console in motion
+
+The terminal UI uses a dark navy canvas with a cyan-to-violet accent line, cyan panel borders, muted context text, yellow warnings, red errors, and cyan info markers. Color is forced in interactive mode and can always be disabled with `--no-color` for CI, pipes, SSH fallback, and machine output.
+
+![RepoSentinel Sentinel Console demo](docs/assets/reposentinel-cli-demo.gif)
+
+[Open the full MP4 terminal demo](docs/assets/reposentinel-cli-demo.mp4) · [View the warning-state screenshot](docs/assets/reposentinel-terminal-scan.png) · [View the 100/100 ready screenshot](docs/assets/reposentinel-terminal-ready.png)
+
+| Token | Tone | Meaning |
+|---|---|---|
+| `cyan` | `#4DE0EB` | Brand, panel accents, info, interactive focus |
+| `violet` | `#D27EFF` | Secondary brand accent and visual identity |
+| `yellow` | `#FFCB5C` | Warning and attention |
+| `red` | `#FF6F84` | Error and critical severity |
+| `slate` | `#75849A` | Remediation, metadata, and secondary context |
+
 ### Quick Start
 
 > **Current status:** the package is still under implementation. The commands below show the target user journey and will become executable as the CLI MVP is completed.
@@ -239,9 +255,17 @@ beta production
 
 Lihat [roadmap lengkap](docs/ROADMAP_BETA_PRODUCTION.md) untuk pekerjaan satu per satu, definition of done, risk control, release gate, dan urutan issue.
 
+### Visual terminal dan demo
+
+Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, border panel cyan, metadata slate, warning kuning, error merah, dan info cyan. Pada terminal interaktif warna dipertahankan; gunakan `--no-color` untuk CI, pipe, SSH fallback, atau output machine.
+
+![Demo Sentinel Console RepoSentinel](docs/assets/reposentinel-cli-demo.gif)
+
+[Open demo MP4](docs/assets/reposentinel-cli-demo.mp4) · [Lihat screenshot warning](docs/assets/reposentinel-terminal-scan.png) · [Lihat screenshot 100/100 ready](docs/assets/reposentinel-terminal-ready.png)
+
 ### Status saat ini
 
-Repository ini sudah melewati tahap fondasi dokumentasi dan mulai memasuki implementasi core. README, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, initial rule pack, dan local development CLI sudah tersedia. Package npm yang dipublikasikan, GitHub Action, reporter Markdown/SARIF, serta beta production masih berstatus `planned` sampai benar-benar dikemas, diuji, dan diverifikasi.
+Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, initial rule pack, local development CLI, reporter Markdown/JSON, GitHub Action, dogfooding, dan hardening gate sudah tersedia. Package `reposentinel` beta candidate `v0.1.0-beta.1` sudah diterbitkan sebagai GitHub prerelease; pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
 
 ---
 
