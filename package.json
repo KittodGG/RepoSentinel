@@ -16,7 +16,7 @@
     "dev": "pnpm --filter reposentinel dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm build && pnpm -r typecheck"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

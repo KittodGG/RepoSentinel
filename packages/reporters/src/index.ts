@@ -15,6 +15,7 @@ function statusMessageKey(status: ScoreStatus): "status.ready" | "status.almostR
     case "needs-attention": return "status.needsAttention";
     case "not-ready": return "status.notReady";
   }
+  throw new Error(`Unknown score status: ${status}`);
 }
 
 function colorize(enabled: boolean, color: (value: string) => string, value: string): string {
