@@ -147,6 +147,7 @@ flowchart LR
 | Rule pack | `implemented` as initial 16-rule pack |
 | CLI package | `implemented` as local development CLI |
 | GitHub Action | `implemented` as composite action and source-checkout workflow |
+| Dogfooding and hardening | `implemented` as local self-scan and safety gates |
 | npm publication | `planned` |
 | Beta production | `planned` |
 
