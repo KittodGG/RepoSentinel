@@ -1,0 +1,19 @@
+extends: recommended
+profile: public
+
+ignore:
+  - fixtures/**
+  - node_modules/**
+  - dist/**
+  - coverage/**
+
+rules:
+  community.license-present: off
+
+security:
+  network: false
+  scan_history: false
+  redact_findings: true
+
+ci:
+  fail_on: error

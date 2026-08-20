@@ -1,10 +1,20 @@
 #!/usr/bin/env node
 
-import { readdir } from "node:fs/promises";
-import { dirname, resolve, relative, basename } from "node:path";
+import { basename, resolve } from "node:path";
+import { access } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import pc from "picocolors";
+import {
+  createRepositoryContext,
+  summarizeFindings,
+  type ExitThreshold,
+  type Finding,
+  type RepositoryProfile,
+  type ScoreStatus
+} from "@reposentinel/core";
+import { loadConfig } from "@reposentinel/config";
+import { runRules } from "@reposentinel/rules";
 import {
   createTranslator,
   isSupportedLocale,
@@ -14,19 +24,17 @@ import {
 } from "@reposentinel/i18n";
 
 const VERSION = "0.1.0-dev.1";
-const IGNORED_DIRECTORIES = new Set([".git", "node_modules", "dist", "coverage", ".reposentinel"]);
+const profiles = ["public", "portfolio", "npm-package"] as const;
+const thresholds = ["critical", "error", "warning", "info"] as const;
 
-type Finding = {
-  severity: "warning" | "info";
-  ruleId: string;
-  path: string;
-  message: string;
-  remediation: string;
-};
+type OutputFormat = "terminal" | "json";
 
-type DiscoveryResult = {
-  files: string[];
-  ignored: number;
+type CheckOptions = {
+  profile: string;
+  lang?: string;
+  color?: boolean;
+  failOn: string;
+  format: OutputFormat;
 };
 
 function explicitLocale(argv: string[]): string | undefined {
@@ -40,61 +48,33 @@ function colorize(enabled: boolean, color: (value: string) => string, value: str
   return enabled ? color(value) : value;
 }
 
-async function discover(root: string): Promise<DiscoveryResult> {
-  const files: string[] = [];
-  let ignored = 0;
-
-  async function visit(directory: string): Promise<void> {
-    const entries = await readdir(directory, { withFileTypes: true });
-    for (const entry of entries) {
-      const absolute = resolve(directory, entry.name);
-      const relativePath = relative(root, absolute) || entry.name;
-      if (entry.isDirectory()) {
-        if (IGNORED_DIRECTORIES.has(entry.name)) {
-          ignored += 1;
-          continue;
-        }
-        await visit(absolute);
-        continue;
-      }
-      if (entry.isFile()) files.push(relativePath);
-    }
+function statusMessageKey(status: ScoreStatus): "status.ready" | "status.almostReady" | "status.needsAttention" | "status.notReady" {
+  switch (status) {
+    case "ready": return "status.ready";
+    case "almost-ready": return "status.almostReady";
+    case "needs-attention": return "status.needsAttention";
+    case "not-ready": return "status.notReady";
   }
-
-  await visit(root);
-  return { files: files.sort(), ignored };
 }
 
-function statusFor(score: number): "ready" | "almostReady" | "needsAttention" | "notReady" {
-  if (score >= 90) return "ready";
-  if (score >= 75) return "almostReady";
-  if (score >= 50) return "needsAttention";
-  return "notReady";
-}
-
-function renderCheck(
+function renderTerminal(
   locale: Locale,
   root: string,
-  profile: string,
-  result: DiscoveryResult,
-  findings: Finding[],
+  profile: RepositoryProfile,
+  ignoredCount: number,
+  filesScanned: number,
+  findings: readonly Finding[],
+  threshold: ExitThreshold,
   useColor: boolean
 ): string {
   const { t } = createTranslator(locale);
-  const warningCount = findings.filter((finding) => finding.severity === "warning").length;
-  const infoCount = findings.filter((finding) => finding.severity === "info").length;
-  const score = Math.max(0, Math.min(100, 100 - warningCount * 5 - infoCount));
-  const statusKey = statusFor(score);
-  const status = t(`status.${statusKey}` as const);
-  const passed = warningCount === 0;
-  const resultLabel = passed ? t("result.passed") : t("result.passedWithWarnings");
-  const brand = colorize(useColor, pc.cyan, "◈ RepoSentinel");
+  const summary = summarizeFindings(findings, threshold);
+  const scoreColor = summary.score >= 90 ? pc.green : summary.score >= 75 ? pc.cyan : pc.yellow;
+  const status = t(statusMessageKey(summary.status));
+  const resultLabel = summary.exitCode === 1 ? t("result.failed") : summary.counts.warning > 0 ? t("result.passedWithWarnings") : t("result.passed");
   const line = colorize(useColor, pc.dim, "──────────────────────────────────────────────────────────────");
-  const warningLabel = colorize(useColor, pc.yellow, "warning");
-  const infoLabel = colorize(useColor, pc.blue, "info");
-  const scoreLabel = score >= 90 ? pc.green : score >= 75 ? pc.cyan : pc.yellow;
-  const output: string[] = [
-    brand,
+  const output = [
+    colorize(useColor, pc.cyan, "◈ RepoSentinel"),
     colorize(useColor, pc.dim, `  ${t("brand.tagline")}`),
     "",
     `${t("scan.repository")} : ${basename(root)}`,
@@ -102,69 +82,78 @@ function renderCheck(
     `${t("scan.mode")}       : local · network off · locale ${locale}`,
     "",
     colorize(useColor, pc.dim, "╭─ health snapshot ─────────────────────────────────────────────╮"),
-    `│  ${colorize(useColor, scoreLabel, `${score} / 100`)}   ${status.toUpperCase()}`.padEnd(64, " ") + "│",
-    `│  ${colorize(useColor, pc.dim, `${result.files.length} files · ${result.ignored} ignored`)}`.padEnd(64, " ") + "│",
+    `│  ${colorize(useColor, scoreColor, `${summary.score} / 100`)}   ${status.toUpperCase()}`.padEnd(64, " ") + "│",
+    `│  ${colorize(useColor, pc.dim, `${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`)}`.padEnd(64, " ") + "│",
     colorize(useColor, pc.dim, "╰────────────────────────────────────────────────────────────────╯"),
     "",
-    `${t("scan.findings")}  ${line}`
+    `${t("scan.findings")}  ${line}`,
+    `${colorize(useColor, pc.red, "CRITICAL")} ${summary.counts.critical}   ${colorize(useColor, pc.red, "ERROR")} ${summary.counts.error}   ${colorize(useColor, pc.yellow, "WARNING")} ${summary.counts.warning}   ${colorize(useColor, pc.blue, "INFO")} ${summary.counts.info}`
   ];
 
   if (findings.length === 0) {
     output.push(colorize(useColor, pc.green, `✓ ${t("scan.noFindings")}`));
   } else {
     for (const finding of findings) {
-      const marker = finding.severity === "warning" ? "!" : "◇";
-      const severity = finding.severity === "warning" ? warningLabel : infoLabel;
-      output.push(`${colorize(useColor, finding.severity === "warning" ? pc.yellow : pc.blue, marker)}  ${finding.ruleId}  ${finding.path}  ${severity}`);
+      const marker = finding.severity === "critical" || finding.severity === "error" ? "×" : finding.severity === "warning" ? "!" : "◇";
+      const markerColor = finding.severity === "critical" || finding.severity === "error" ? pc.red : finding.severity === "warning" ? pc.yellow : pc.blue;
+      const location = finding.path ? `${finding.path}${finding.line ? `:${finding.line}` : ""}` : "repository";
+      output.push("", `${colorize(useColor, markerColor, marker)}  ${finding.ruleId}  ${location}  ${finding.severity}`);
       output.push(`   ${finding.message}`);
+      if (finding.evidence) output.push(`   ${colorize(useColor, pc.dim, `Evidence: ${finding.evidence}`)}`);
       output.push(`   ${colorize(useColor, pc.dim, `Fix: ${finding.remediation}`)}`);
     }
   }
 
-  output.push("", `${t("scan.score")}  : ${score} / 100`, `${t("scan.status")} : ${status}`, `${t("scan.result")} : ${resultLabel}`);
+  output.push("", `${t("scan.score")}  : ${summary.score} / 100`, `${t("scan.status")} : ${status}`, `${t("scan.result")} : ${resultLabel}`, `Exit code : ${summary.exitCode}`);
   return `${output.join("\n")}\n`;
 }
 
-async function runCheck(
+function renderJson(
   locale: Locale,
-  target: string,
-  profile: string,
-  useColor: boolean,
-  stderr: NodeJS.WriteStream = process.stderr
-): Promise<number> {
+  root: string,
+  profile: RepositoryProfile,
+  findings: readonly Finding[],
+  threshold: ExitThreshold
+): string {
+  const summary = summarizeFindings(findings, threshold);
+  return `${JSON.stringify({
+    schemaVersion: "reposentinel.report/v1",
+    locale,
+    repository: basename(root),
+    profile,
+    score: summary.score,
+    status: summary.status,
+    threshold,
+    summary: summary.counts,
+    findings
+  }, null, 2)}\n`;
+}
+
+async function runCheck(locale: Locale, target: string, options: CheckOptions): Promise<number> {
   const { t } = createTranslator(locale);
   const root = resolve(target);
-  let result: DiscoveryResult;
+  const profile = options.profile as RepositoryProfile;
+  const threshold = options.failOn as ExitThreshold;
+
   try {
-    result = await discover(root);
+    await access(root);
   } catch {
-    stderr.write(`${colorize(useColor, pc.red, "×")} ${t("error.invalidPath", { path: root })}\n`);
+    process.stderr.write(`${colorize(options.color !== false, pc.red, "×")} ${t("error.invalidPath", { path: root })}\n`);
     return 2;
   }
 
-  const files = new Set(result.files);
-  const findings: Finding[] = [];
-  if (!files.has("README.md")) {
-    findings.push({
-      severity: "warning",
-      ruleId: "documentation.readme-exists",
-      path: "README.md",
-      message: locale === "id" ? "README.md tidak ditemukan di root repository." : "README.md was not found at the repository root.",
-      remediation: locale === "id" ? "Tambahkan README.md dengan ringkasan dan Quick Start." : "Add README.md with a summary and Quick Start."
-    });
-  }
-  if (!files.has(".gitignore")) {
-    findings.push({
-      severity: "info",
-      ruleId: "gitignore.exists",
-      path: ".gitignore",
-      message: locale === "id" ? ".gitignore belum ditemukan." : ".gitignore was not found.",
-      remediation: locale === "id" ? "Tambahkan pola ignore yang relevan sebelum commit." : "Add relevant ignore patterns before committing."
-    });
-  }
+  const loaded = await loadConfig(root, profile);
+  const config = { ...loaded.config, ciFailOn: threshold };
+  const context = await createRepositoryContext(root, profile, config);
+  const findings = runRules(context);
+  const summary = summarizeFindings(findings, threshold);
 
-  process.stdout.write(renderCheck(locale, root, profile, result, findings, useColor));
-  return findings.some((finding) => finding.severity === "warning") ? 0 : 0;
+  if (options.format === "json") {
+    process.stdout.write(renderJson(locale, root, profile, findings, threshold));
+  } else {
+    process.stdout.write(renderTerminal(locale, root, profile, context.ignoredCount, context.files.length, findings, threshold, options.color !== false));
+  }
+  return summary.exitCode;
 }
 
 function buildProgram(locale: Locale): Command {
@@ -182,11 +171,27 @@ function buildProgram(locale: Locale): Command {
     .description(t("cli.command.check"))
     .option("--profile <profile>", "Repository profile", "public")
     .option("--lang <locale>", t("cli.option.lang"))
+    .option("--fail-on <severity>", "Exit threshold", "error")
+    .option("--format <format>", "Output format", "terminal")
     .option("--no-color", "Disable ANSI color output")
-    .action(async (target = ".", options: { profile: string; lang?: string; color?: boolean }) => {
+    .action(async (target = ".", options: CheckOptions) => {
+      if (!profiles.includes(options.profile as RepositoryProfile)) {
+        process.stderr.write(`Unknown profile: ${options.profile}. Use: ${profiles.join(", ")}\n`);
+        process.exitCode = 2;
+        return;
+      }
+      if (!thresholds.includes(options.failOn as ExitThreshold)) {
+        process.stderr.write(`Unknown threshold: ${options.failOn}. Use: ${thresholds.join(", ")}\n`);
+        process.exitCode = 2;
+        return;
+      }
+      if (options.format !== "terminal" && options.format !== "json") {
+        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, json.\n`);
+        process.exitCode = 2;
+        return;
+      }
       const selected = resolveLocale(options.lang ?? locale);
-      const exitCode = await runCheck(selected, target, options.profile, options.color !== false);
-      process.exitCode = exitCode;
+      process.exitCode = await runCheck(selected, target, options);
     });
 
   program
@@ -202,8 +207,7 @@ function buildProgram(locale: Locale): Command {
       const selectedTranslator = createTranslator(selected);
       process.stdout.write(`${selectedTranslator.t("brand.tagline")}\n\n`);
       for (const supported of supportedLocales) {
-        const marker = supported === selected ? "›" : " ";
-        process.stdout.write(`${marker} ${supported}\n`);
+        process.stdout.write(`${supported === selected ? "›" : " "} ${supported}\n`);
       }
     });
 

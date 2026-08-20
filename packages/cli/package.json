@@ -21,7 +21,10 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
+    "@reposentinel/config": "workspace:*",
+    "@reposentinel/core": "workspace:*",
     "@reposentinel/i18n": "workspace:*",
+    "@reposentinel/rules": "workspace:*",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1"
   },

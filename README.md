@@ -76,6 +76,20 @@ A successful interactive scan is designed to look like this:
   Result: passed with warnings                                      exit 0
 ```
 
+### Quick Start
+
+> **Current status:** the package is still under implementation. The commands below show the target user journey and will become executable as the CLI MVP is completed.
+
+```bash
+# After the package is published
+npx reposentinel check . --lang en
+
+# During local development
+pnpm install
+pnpm build
+node packages/cli/dist/index.js check . --lang id
+```
+
 ### Target commands
 
 > These are **planned UX contracts**, not a claim that the package is already published.
@@ -177,6 +191,16 @@ reposentinel check . --profile portfolio --lang id
 
 # Bahasa English untuk CI yang deterministik
 CI=true reposentinel check . --lang en --format json
+```
+
+### Quick Start
+
+> **Status saat ini:** package masih dalam tahap implementasi. Command berikut menunjukkan alur target dan command development yang dapat digunakan setelah workspace disiapkan.
+
+```bash
+pnpm install
+pnpm build
+node packages/cli/dist/index.js check . --lang id
 ```
 
 ### Tahapan menuju beta production
