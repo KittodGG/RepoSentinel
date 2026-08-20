@@ -20,6 +20,9 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@24.13.3)(tsx@4.23.12)(yaml@2.9.0)
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
 
   packages/cli:
     dependencies:

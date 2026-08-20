@@ -1,0 +1,67 @@
+name: RepoSentinel
+
+description: Scan repository readiness locally in GitHub Actions with multilingual terminal, Markdown, or JSON output.
+author: RepoSentinel contributors
+branding:
+  color: cyan
+  icon: shield
+
+inputs:
+  profile:
+    description: "Repository profile: public, portfolio, or npm-package."
+    required: false
+    default: public
+  lang:
+    description: "UI locale: en or id."
+    required: false
+    default: en
+  fail-on:
+    description: "Minimum severity that makes the action fail: critical, error, warning, or info."
+    required: false
+    default: error
+  format:
+    description: "Report format: terminal, markdown, or json."
+    required: false
+    default: markdown
+  output:
+    description: Optional report path relative to the repository workspace.
+    required: false
+    default: reposentinel-report.md
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10.15.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: ${{ github.action_path }}/.nvmrc
+        cache: pnpm
+        cache-dependency-path: ${{ github.action_path }}/pnpm-lock.yaml
+
+    - name: Install RepoSentinel workspace
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm --filter reposentinel build
+
+    - name: Scan repository
+      shell: bash
+      env:
+        RS_PROFILE: ${{ inputs.profile }}
+        RS_LANG: ${{ inputs.lang }}
+        RS_FAIL_ON: ${{ inputs.fail-on }}
+        RS_FORMAT: ${{ inputs.format }}
+        RS_OUTPUT: ${{ inputs.output }}
+      run: |
+        set -euo pipefail
+        args=(check "$GITHUB_WORKSPACE" --profile "$RS_PROFILE" --lang "$RS_LANG" --fail-on "$RS_FAIL_ON" --format "$RS_FORMAT" --no-color)
+        if [[ -n "$RS_OUTPUT" ]]; then
+          args+=(--output "$GITHUB_WORKSPACE/$RS_OUTPUT")
+        fi
+        node "$GITHUB_ACTION_PATH/packages/cli/dist/index.js" "${args[@]}"

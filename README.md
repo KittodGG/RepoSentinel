@@ -146,7 +146,7 @@ flowchart LR
 | Core engine | `implemented` as deterministic development foundation |
 | Rule pack | `implemented` as initial 16-rule pack |
 | CLI package | `implemented` as local development CLI |
-| GitHub Action | `planned` |
+| GitHub Action | `implemented` as composite action and source-checkout workflow |
 | npm publication | `planned` |
 | Beta production | `planned` |
 
