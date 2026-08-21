@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a private security vulnerability
+    url: https://github.com/KittodGG/RepoSentinel/security/advisories/new
+    about: Do not disclose unpatched vulnerabilities in a public issue. Use GitHub Private Vulnerability Reporting when available.
+  - name: Read the contribution guide
+    url: https://github.com/KittodGG/RepoSentinel/blob/main/CONTRIBUTING.md
+    about: Review setup, scope, testing, licensing, and Pull Request requirements before contributing.
+  - name: Read the security policy
+    url: https://github.com/KittodGG/RepoSentinel/blob/main/SECURITY.md
+    about: Learn the safe disclosure process and security boundaries.

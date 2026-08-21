@@ -32,7 +32,7 @@ import {
 } from "@reposentinel/i18n";
 
 const VERSION = "0.1.0-beta.1";
-const profiles = ["public", "portfolio", "npm-package"] as const;
+const profiles = ["public", "portfolio", "npm-package", "academic", "private-team", "mobile-app"] as const;
 const thresholds = ["critical", "error", "warning", "info"] as const;
 
 type OutputFormat = "terminal" | "json" | "markdown" | "sarif" | "html";
@@ -437,7 +437,7 @@ function buildProgram(locale: Locale): Command {
     .command("check [path]")
     .alias("report")
     .description(t("cli.command.check"))
-    .option("--profile <profile>", "Repository profile", "public")
+    .option("--profile <profile>", "Repository profile: public, portfolio, npm-package, academic, private-team, mobile-app", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .option("--fail-on <severity>", "Exit threshold", "error")
     .option("--format <format>", "Output format: terminal, markdown, json, sarif, html")
@@ -496,7 +496,7 @@ function buildProgram(locale: Locale): Command {
     .command("init [path]")
     .description(t("cli.command.init"))
     .option("--force", "Replace an existing .reposentinel.yml")
-    .option("--profile <profile>", "Repository profile", "public")
+    .option("--profile <profile>", "Repository profile: public, portfolio, npm-package, academic, private-team, mobile-app", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .action(async (target = ".", options: { force?: boolean; profile?: string; lang?: string }) => {
       const selectedProfile = options.profile ?? "public";
@@ -512,7 +512,7 @@ function buildProgram(locale: Locale): Command {
   program
     .command("baseline <action> [path]")
     .description(t("cli.command.baseline"))
-    .option("--profile <profile>", "Repository profile", "public")
+    .option("--profile <profile>", "Repository profile: public, portfolio, npm-package, academic, private-team, mobile-app", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .option("--output <file>", "Baseline output path", ".reposentinel/baseline.json")
     .action(async (action: string, target = ".", options: { profile?: string; lang?: string; output?: string }) => {

@@ -11,7 +11,7 @@ export type RuleCategory =
   | "ci"
   | "portfolio"
   | "custom";
-export type RepositoryProfile = "public" | "portfolio" | "npm-package";
+export type RepositoryProfile = "public" | "portfolio" | "npm-package" | "academic" | "private-team" | "mobile-app";
 export type ExitThreshold = Severity;
 export type ReportFormat = "terminal" | "markdown" | "json" | "sarif" | "html";
 export type FileKind = "text" | "binary" | "symlink" | "directory";

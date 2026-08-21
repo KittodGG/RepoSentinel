@@ -9,7 +9,7 @@
 **Repository readiness, without the noise.**  
 *Cek repository Anda sebelum orang lain menilainya.*
 
-[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [Security boundary](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md)
+[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [Security boundary](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
 </div>
 
@@ -32,7 +32,7 @@ RepoSentinel is a local-first developer tool that checks the layer around the co
 | **Local-first** | Source code stays on the user’s machine during local scans. Network rules are opt-in. |
 | **Deterministic** | The same repository and configuration produce the same normalized findings. |
 | **Explainable** | Every finding has a rule ID, severity, location, evidence, impact, and remediation. |
-| **Profile-driven** | `public`, `portfolio`, and `npm-package` repositories have different readiness needs. |
+| **Profile-driven** | `public`, `portfolio`, `npm-package`, `academic`, `private-team`, and `mobile-app` repositories can express different readiness contexts. |
 | **Safe by default** | The scanner reads the target as data and does not run its package scripts or build commands. |
 | **Multilingual** | UI copy and documentation can be localized while rule IDs and machine schemas remain stable. |
 
@@ -44,7 +44,7 @@ Links & assets      URLs · images · badges · demo references
 Security hygiene    .env · private keys · high-confidence credential patterns
 Package hygiene     lockfiles · manifest · scripts · package metadata
 Git metadata        .gitignore · tracked generated files · large files
-Community           license presence · issue templates · contributor readiness
+Community           license presence · issue templates · contributor readiness · Code of Conduct
 CI & automation     workflow permissions · release metadata · syntax hints
 Portfolio profile   summary · tech stack · screenshot · visible demo
 ```
@@ -339,9 +339,9 @@ Keputusan ini mengutamakan runtime LTS, dependency yang terukur, core engine yan
 
 ## Contributing
 
-Pada tahap awal, perubahan harus diawali dengan `context → problem → proposed solution → acceptance criteria → dependencies → risks`. Rule baru wajib memiliki rule ID stabil, kategori, severity, detector, evidence, remediation, fixture positif/negatif, regression test, dan dokumentasi.
+Pada tahap awal, perubahan harus diawali dengan `context → problem → proposed solution → acceptance criteria → dependencies → risks`. Rule baru wajib memiliki rule ID stabil, kategori, severity, detector, evidence, remediation, fixture positif/negatif, regression test, dan dokumentasi. Repository saat ini menggunakan **MIT License**; MIT adalah open-source license yang valid dan tidak harus diganti menjadi Apache-2.0 hanya karena project bersifat open source. Perbandingan lisensi dan batas migrasi terdokumentasi pada [License Policy](docs/LICENSE_POLICY.md).
 
-Sebelum membuka pull request, jalankan check yang tersedia dan jelaskan dampak security/privacy. Jangan mengirim secret atau source code sensitif pada issue, log, screenshot, atau fixture.
+Sebelum membuka Pull Request, baca [CONTRIBUTING.md](CONTRIBUTING.md), pilih Issue template yang sesuai, jalankan checks yang tersedia, dan jelaskan dampak security/privacy. Jangan mengirim secret atau source code sensitif pada Issue, log, screenshot, atau fixture.
 
 ## References
 

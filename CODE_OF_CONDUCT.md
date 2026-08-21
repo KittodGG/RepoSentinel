@@ -1,11 +1,27 @@
 # Code of Conduct
 
-RepoSentinel is committed to a welcoming, respectful, and constructive community. Participants are expected to communicate professionally, assume good faith, respect different perspectives, and focus feedback on the work rather than on individuals.
+RepoSentinel berkomitmen membangun komunitas yang welcoming, respectful, constructive, dan aman. Aturan ini berlaku di repository, Issue, Pull Request, code review, discussion, chat/project space resmi, event yang mewakili project, serta komunikasi maintainer dengan contributor.
 
-Harassment, discrimination, threats, personal attacks, doxxing, sexualized conduct, and deliberately disruptive behavior are not acceptable in project spaces.
+## Perilaku yang diharapkan
 
-## Reporting
+Peserta diharapkan berkomunikasi secara profesional, berasumsi baik sebelum meminta klarifikasi, memberikan kritik terhadap pekerjaan bukan terhadap pribadi, menghormati perbedaan perspektif, menerima koreksi dengan terbuka, dan membantu menjaga diskusi tetap relevan terhadap masalah teknis atau dokumentasi.
 
-For a sensitive concern, contact the project maintainer privately through the contact method listed in the repository profile or GitHub repository settings. Do not include credentials, private keys, or other sensitive information in a public issue.
+## Perilaku yang tidak dapat diterima
 
-Maintainers will review reports privately, protect the reporter’s confidentiality where possible, and take proportionate action based on the facts available.
+Harassment, discrimination, threats, hate speech, personal attacks, doxxing, sexualized conduct, unwanted contact, intimidation, deliberate disruption, malicious disclosure of private information, dan kontribusi yang sengaja menyisipkan malware, credential, atau destructive behavior tidak dapat diterima.
+
+Perbedaan pendapat mengenai design, priority, license, atau review tidak dengan sendirinya merupakan pelanggaran. Namun, perbedaan tersebut harus disampaikan tanpa serangan pribadi, ancaman, atau publikasi data privat.
+
+## Pelaporan
+
+Untuk masalah perilaku, kirim laporan privat melalui [GitHub Private Vulnerability Reporting/Security Advisories](https://github.com/KittodGG/RepoSentinel/security/advisories/new) atau contact method maintainer yang tercantum pada repository settings. Jangan membuat laporan publik jika laporan tersebut berisi informasi personal, private conversation, credential, private key, atau detail yang dapat membahayakan seseorang.
+
+Untuk kerentanan keamanan teknis, ikuti [SECURITY.md](SECURITY.md). Untuk bug biasa, gunakan [Bug Report](.github/ISSUE_TEMPLATE/bug_report.md). Untuk proposal fitur atau rule, gunakan [Feature Proposal](.github/ISSUE_TEMPLATE/feature_proposal.md).
+
+## Penanganan
+
+Maintainer akan meninjau laporan secara proporsional terhadap risiko, menjaga kerahasiaan reporter sejauh memungkinkan, dan dapat meminta bukti tambahan yang aman. Tindakan dapat berupa klarifikasi, peringatan, penghapusan konten, pembatasan partisipasi sementara, atau penghentian partisipasi pada project. Keputusan mempertimbangkan fakta yang tersedia, dampak, pola perilaku, dan keselamatan komunitas.
+
+## Batasan
+
+RepoSentinel tidak menjanjikan response time, outcome, atau perlindungan absolut terhadap identitas reporter. Jangan mengirim data yang tidak perlu. Dengan berpartisipasi, Anda menyetujui untuk mengikuti aturan ini dan membantu maintainer menjaga project tetap aman serta produktif.

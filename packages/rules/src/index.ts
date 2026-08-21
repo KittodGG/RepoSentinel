@@ -511,9 +511,16 @@ export const rules: readonly RuleDefinition[] = [
   }
 ];
 
+const profileBase: Partial<Record<string, string>> = {
+  academic: "public",
+  "private-team": "public",
+  "mobile-app": "public"
+};
+
 export function enabledRules(context: RepositoryContext): RuleDefinition[] {
+  const baseProfile = profileBase[context.profile];
   return rules
-    .filter((rule) => rule.profiles.includes(context.profile))
+    .filter((rule) => rule.profiles.includes(context.profile) || (baseProfile ? rule.profiles.includes(baseProfile) : false))
     .sort((left, right) => left.category.localeCompare(right.category) || left.id.localeCompare(right.id));
 }
 

@@ -1,12 +1,12 @@
 # RepoSentinel — Contoh Semua Case dan Tampilan CLI
 
-**Status dokumen:** `proposed / target UX`  
+**Status dokumen:** `verified beta contract + historical UX examples`
 **Visual UI addendum:** [RepoSentinel — Visual & Interactive CLI Specification](./RepoSentinel_CLI_Visual_Interaction_Spec.md)  
-**Status produk:** `concept specification / MVP planning`  
+**Status produk:** `verified beta candidate; examples may include historical target-UX transcripts`
 **Bahasa output:** Penjelasan pengguna menggunakan Bahasa Indonesia; command, rule ID, konfigurasi, dan istilah teknis tetap dalam Bahasa Inggris.  
 **Positioning:** *RepoSentinel — cek repository Anda sebelum orang lain menilainya.*
 
-> **Penting:** RepoSentinel belum merupakan package yang sudah dipublikasikan. Seluruh command, nama package, URL dokumentasi, dan output pada dokumen ini adalah **contoh kontrak UX target**, bukan bukti bahwa fitur tersebut sudah tersedia atau sudah diverifikasi. [1]
+> **Penting:** RepoSentinel sudah memiliki beta candidate dan command yang berstatus `Implemented` sudah diuji. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; gunakan README dan implementation execution map sebagai source untuk status aktual.
 
 ## 1. Tujuan Dokumen
 
@@ -75,7 +75,7 @@ Commands:
   baseline create              Save current findings as a baseline
 
 Options:
-  -p, --profile <name>         public | portfolio | npm-package
+  -p, --profile <name>         public | portfolio | npm-package | academic | private-team | mobile-app
       --fail-on <severity>     critical | error | warning | info
       --format <format>        terminal | markdown | json | sarif | html
       --config <path>          Configuration file path
@@ -656,7 +656,7 @@ WARNING  release.metadata
 Exit code: 1
 ```
 
-Profile hanya menentukan konteks dan rule yang aktif; profile bukan pengganti review manual dan tidak membuktikan package siap dipublikasikan. Daftar profile awal yang disepakati mencakup `public`, `portfolio`, dan `npm-package`; profile lain seperti `academic` dan `private-team` masih perlu keputusan implementasi lanjutan. [1]
+Profile hanya menentukan konteks dan rule yang aktif; profile bukan pengganti review manual dan tidak membuktikan package siap dipublikasikan. Profile yang tersedia adalah `public`, `portfolio`, `npm-package`, `academic`, `private-team`, dan `mobile-app`. Tiga profile tambahan menggunakan public baseline rule set dengan nama konteks yang lebih spesifik.
 
 ## 13. Case J — Severity Override, Ignore, dan Threshold
 

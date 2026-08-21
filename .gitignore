@@ -6,6 +6,7 @@ docs/assets/demo-frames/
 .turbo/
 .cache/
 *.log
+*.vsix
 .env
 .env.*
 !.env.example

@@ -247,11 +247,14 @@ Setelah filter diterapkan:
   › public       README, links, security, license, contributors
     portfolio    demo, screenshot, summary, tech stack, setup
     npm-package  manifest, exports, scripts, lockfile, release
+    academic     papers, citations, reproducibility, research docs
+    private-team internal docs, ownership, security, contributor boundaries
+    mobile-app   app metadata, platform assets, CI, release readiness
 
   ↑↓ move  ·  enter select  ·  esc cancel
 ```
 
-Profile picker harus menampilkan fokus utama masing-masing profile, bukan hanya nama. Profile `academic` dan `private-team` dapat ditambahkan setelah keputusan scope lanjutan; jangan menampilkannya sebagai profile MVP yang sudah tersedia sebelum diverifikasi. [1]
+Profile picker harus menampilkan fokus utama masing-masing profile, bukan hanya nama. Tiga profile tambahan memakai public baseline rule set dengan konteks yang lebih spesifik; profile bukan pengganti review manual atau jaminan keamanan.
 
 ## 9. Init Wizard yang Stylish
 
@@ -285,7 +288,7 @@ Profile picker harus menampilkan fokus utama masing-masing profile, bukan hanya 
 
   profile       portfolio
   fail on       error
-  reports       terminal, markdown, json
+  reports       terminal, markdown, json, sarif, html
   network       disabled
   ignore        node_modules/**, dist/**, coverage/**
 
@@ -331,7 +334,7 @@ Detail rule:
   Detect environment files that may contain credentials.
 
   default severity   error
-  profiles           public, portfolio, npm-package
+  profiles           public, portfolio, npm-package, academic, private-team, mobile-app
   network required   no
   modifies files     no
 

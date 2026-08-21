@@ -1,11 +1,17 @@
 {
-  "name": "@reposentinel/vscode",
-  "version": "0.1.0-dev.1",
+  "name": "reposentinel-diagnostics",
   "private": true,
+  "displayName": "RepoSentinel Diagnostics",
+  "publisher": "kittodgg",
+  "version": "0.1.0-beta.1",
   "description": "VS Code diagnostics adapter for RepoSentinel JSON reports",
+  "license": "MIT",
+  "categories": ["Linters"],
+  "engines": { "vscode": "^1.103.0" },
+  "repository": { "type": "git", "url": "https://github.com/KittodGG/RepoSentinel" },
   "type": "module",
   "main": "dist/extension.cjs",
-  "files": ["dist", "package.json", "README.md"],
+  "files": ["dist", "package.json", "README.md", "LICENSE"],
   "contributes": {
     "commands": [
       {
@@ -17,6 +23,7 @@
   "activationEvents": ["onCommand:reposentinel.scan"],
   "scripts": {
     "build": "tsup src/extension.ts --format cjs --external vscode --clean",
+    "package": "pnpm build && vsce package",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
@@ -24,6 +31,7 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@types/vscode": "^1.103.0",
+    "@vscode/vsce": "^3.6.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"

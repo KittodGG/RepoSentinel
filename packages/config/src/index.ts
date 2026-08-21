@@ -5,11 +5,11 @@ import { z } from "zod";
 import type { ReportFormat, RepositoryProfile, ResolvedConfig, Severity } from "@reposentinel/core";
 
 const severitySchema = z.enum(["critical", "error", "warning", "info", "off"]);
-const profileSchema = z.enum(["public", "portfolio", "npm-package"]);
+const profileSchema = z.enum(["public", "portfolio", "npm-package", "academic", "private-team", "mobile-app"]);
 const reportFormatSchema = z.enum(["terminal", "markdown", "json", "sarif", "html"]);
 
 const rawConfigSchema = z.object({
-  extends: z.string().optional(),
+  extends: z.enum(["recommended"]).optional(),
   baseline: z.string().optional(),
   custom_rules: z.string().optional(),
   profile: profileSchema.optional(),

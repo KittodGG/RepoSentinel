@@ -14,7 +14,7 @@ export type CustomRuleSpec = {
 };
 
 const severities = new Set<Severity>(["critical", "error", "warning", "info"]);
-const profiles = new Set(["public", "portfolio", "npm-package"]);
+const profiles = new Set(["public", "portfolio", "npm-package", "academic", "private-team", "mobile-app"]);
 
 function assertString(value: unknown, field: string, index: number): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`Custom rule ${index} requires a non-empty ${field}.`);

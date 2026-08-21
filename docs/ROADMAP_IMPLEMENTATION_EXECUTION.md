@@ -15,9 +15,9 @@ Implementasi harus mempertahankan prinsip berikut: scanner local-first, network 
 | Banner audit | Browser-rendered dan visual layout terverifikasi |
 | Runtime target | Node.js 24 LTS |
 | Workspace | pnpm workspace, TypeScript strict, ESM |
-| Existing report formats | terminal, Markdown, JSON, SARIF |
+| Existing report formats | terminal, Markdown, JSON, SARIF, HTML |
 | Existing baseline | Repository-local fingerprint suppression |
-| Existing profiles | `public`, `portfolio`, `npm-package` |
+| Existing profiles | `public`, `portfolio`, `npm-package`, `academic`, `private-team`, `mobile-app` |
 | Existing CI | GitHub Actions quality workflow |
 
 ## Dependency map
@@ -49,6 +49,18 @@ The CLI can compare the target branch against an explicit Git base ref without n
 ### HTML report
 
 `--format html` produces a self-contained file with no CDN, external font, remote image, or runtime network dependency. All user-controlled strings are HTML-escaped. It contains score, status, severity counts, repository/profile metadata, findings, evidence, remediation, and a clear safety disclaimer. The output is schema-derived and covered by a fixture or snapshot test.
+
+### Additional profiles and configuration inheritance
+
+The CLI and strict config schema support `academic`, `private-team`, and `mobile-app`. These named profiles inherit the proven public baseline rule set while preserving profile identity in reports. `extends: recommended` is validated as an explicit supported marker and resolves to the safe default rule/configuration baseline.
+
+### VS Code package
+
+The optional local diagnostics adapter is typechecked, built, and packaged as `reposentinel-diagnostics-0.1.0-beta.1.vsix`. The VSIX contains its CommonJS entrypoint, manifest, README, and MIT license. Marketplace publication is intentionally separate and requires maintainer identity and release approval.
+
+### Contribution governance
+
+The repository now includes a complete contributor guide, Pull Request template, bug/feature/beta/question/documentation Issue templates, GitHub Issue contact links, Code of Conduct, Security Policy, and license decision record.
 
 ### Npm publication
 
