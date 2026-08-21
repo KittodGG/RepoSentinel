@@ -1,0 +1,14 @@
+# RepoSentinel primary maintainer
+# Keep this file under code ownership so changes to ownership rules require maintainer review.
+* @KittodGG
+
+# High-risk areas are listed explicitly for discoverability.
+/packages/core/ @KittodGG
+/packages/rules/ @KittodGG
+/packages/cli/ @KittodGG
+/packages/reporters/ @KittodGG
+/packages/dashboard/ @KittodGG
+/packages/vscode/ @KittodGG
+/.github/ @KittodGG
+/SECURITY.md @KittodGG
+/LICENSE @KittodGG

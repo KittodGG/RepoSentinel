@@ -89,3 +89,13 @@ A phase-10 change is not ready to merge until the following conditions hold:
 ## Known pre-beta limitations
 
 The action currently builds the CLI from the checked-out action repository rather than a registry-published version. It supports terminal, Markdown, JSON, SARIF, and HTML output; baseline suppression is available when a repository-local `.reposentinel/baseline.json` is present, and changed-files mode is available through the `changed-since` input. Third-party action references use version tags during the initial phase; pinning them to reviewed commit SHAs is a hardening task before beta production. The action does not yet upload a report artifact automatically; the caller can add `actions/upload-artifact` after the scan step.
+
+## Manual publication workflows
+
+The repository contains two manual publication workflows. `.github/workflows/release.yml` publishes the npm CLI only when the workflow input is exactly `publish`, after `pnpm release:gate` succeeds, and with the `NPM_TOKEN` repository secret. `.github/workflows/vscode-publish.yml` builds and packages the `reposentinel-diagnostics` VSIX, then publishes it only when the workflow input is exactly `publish` and the `VSCE_PAT` secret is available for the `kittodgg` publisher identity.
+
+Neither publication workflow runs on an ordinary push. Publication requires owner approval, an authenticated registry or publisher identity, and a version/release review. Do not place npm or Marketplace tokens in repository files, Issue comments, Pull Requests, or chat messages.
+
+## Governance
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md), [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md), and [GitHub Governance](GITHUB_GOVERNANCE.md) for contribution requirements, private disclosure, CODEOWNERS, and the recommended branch-protection policy. The current private-repository GitHub plan does not permit branch protection through the API; the policy is ready to apply after the repository plan or visibility permits it.

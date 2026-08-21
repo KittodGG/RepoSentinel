@@ -13,7 +13,7 @@
 
 </div>
 
-> **Release status / Status rilis:** RepoSentinel is a verified **beta candidate**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, and documentation are implemented and validated. The beta package is available as GitHub prerelease `v0.1.0-beta.1`; pilot feedback and stable-release sign-off remain separate release activities.
+> **Release status / Status rilis:** RepoSentinel is a verified **beta candidate**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, and documentation are implemented and validated. The CLI is published on npm as `reposentinel@0.1.0-beta.2` under the `beta` tag; the GitHub prerelease `v0.1.0-beta.1` remains the source snapshot. Pilot feedback and stable-release sign-off remain separate release activities.
 
 ---
 
@@ -101,9 +101,12 @@ The terminal UI uses a dark navy canvas with a cyan-to-violet accent line, cyan 
 > **Verified local path:** the commands below run from the repository workspace. The published beta artifact is linked in the release section below.
 
 ```bash
-# Install the verified beta artifact from GitHub Releases
-npm install --global https://github.com/KittodGG/RepoSentinel/releases/download/v0.1.0-beta.1/reposentinel-0.1.0-beta.1.tgz
+# Install the verified beta from npm
+npm install --global reposentinel@beta
 reposentinel --version
+
+# Reproducible version-pinned install
+npm install --global reposentinel@0.1.0-beta.2
 reposentinel check . --lang en
 
 # During local development
@@ -202,13 +205,14 @@ flowchart LR
 | Changed-files mode | `implemented` with explicit Git base ref and deterministic scope |
 | Safe autofix | `implemented` as allowlisted dry-run/apply templates |
 | Watch mode | `implemented` with debounce and CI one-shot fallback |
-| VS Code diagnostics | `implemented` as optional local adapter package |
 | Custom rules | `implemented` as strict JSON registry with glob-only matching |
 | Network link checks | `implemented` as explicit opt-in bounded HTTP checks |
 | Portfolio dashboard | `implemented` as local JSON-to-HTML aggregation |
-| npm/package artifact | `beta candidate` `v0.1.0-beta.1` GitHub prerelease |
-| npm publication | `pending owner-approved registry publication` |
-| Beta production | `beta candidate published` as `v0.1.0-beta.1`; pilot sign-off pending |
+| npm/package artifact | `published` as npm `reposentinel@0.1.0-beta.2` with `beta` tag; GitHub prerelease `v0.1.0-beta.1` remains available |
+| VS Code diagnostics | `implemented` as optional local adapter; VSIX packaging verified |
+| npm publication | `published` as `reposentinel@0.1.0-beta.2`; registry install smoke test passed |
+| VS Code Marketplace publication | `pending publisher identity and VSCE_PAT` |
+| Beta production | `beta candidate published` on npm and GitHub; pilot sign-off pending |
 
 ### Safety boundaries
 
@@ -226,6 +230,10 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 | [Visual & Interactive CLI](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) | Sentinel Console panels, keyboard navigation, themes, fallback, and CI mode. |
 | [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md) | Node.js, TypeScript, CLI, localization, performance, and dependency decisions. |
 | [Beta Production Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) | One-by-one stages from repository bootstrap to beta production. |
+| [Contributing](CONTRIBUTING.md) | Setup, contribution workflow, review rules, testing, security, and license declaration. |
+| [Security Policy](SECURITY.md) | Private vulnerability reporting and safe disclosure boundaries. |
+| [GitHub Governance](docs/GITHUB_GOVERNANCE.md) | CODEOWNERS and branch-protection policy, including current plan limitation. |
+| [License Policy](docs/LICENSE_POLICY.md) | MIT status, Apache-2.0 comparison, and migration checklist. |
 
 ---
 
@@ -244,7 +252,7 @@ RepoSentinel adalah developer tool local-first untuk memeriksa lapisan di sekita
 | **Local-first** | Source code tetap berada di perangkat pengguna saat local scan. Network rule bersifat opt-in. |
 | **Deterministic** | Repository dan konfigurasi yang sama menghasilkan finding yang sama. |
 | **Explainable** | Setiap finding memiliki rule ID, severity, lokasi, evidence, dampak, dan remediation. |
-| **Profile-driven** | Repository `public`, `portfolio`, dan `npm-package` memakai konteks pemeriksaan yang berbeda. |
+| **Profile-driven** | Repository `public`, `portfolio`, `npm-package`, `academic`, `private-team`, dan `mobile-app` dapat memakai konteks pemeriksaan yang berbeda. |
 | **Safe by default** | Scanner membaca repository sebagai data dan tidak menjalankan package script atau build command. |
 | **Multilingual** | UI dan dokumentasi dapat diterjemahkan tanpa mengubah rule ID dan schema machine output. |
 
@@ -269,9 +277,12 @@ reposentinel report . --format markdown --output report.md --lang id
 > **Status terverifikasi:** workspace dan beta candidate sudah dapat dipasang, dibangun, diuji, serta dijalankan secara lokal pada Node.js 24.
 
 ```bash
-# Install the verified beta artifact
-npm install --global https://github.com/KittodGG/RepoSentinel/releases/download/v0.1.0-beta.1/reposentinel-0.1.0-beta.1.tgz
+# Install the verified beta from npm
+npm install --global reposentinel@beta
 reposentinel --version
+
+# Reproducible version-pinned install
+npm install --global reposentinel@0.1.0-beta.2
 reposentinel check . --lang id
 
 # Or run from the workspace while contributing
@@ -316,7 +327,7 @@ Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, bor
 
 ### Status saat ini
 
-Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Package `reposentinel` beta candidate `v0.1.0-beta.1` sudah diterbitkan sebagai GitHub prerelease; npm registry publication menunggu npm authentication dan explicit release approval, sedangkan pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
+Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Package `reposentinel@0.1.0-beta.2` sudah diterbitkan ke npm dengan registry install smoke test yang berhasil; GitHub prerelease `v0.1.0-beta.1` tetap tersedia sebagai source snapshot. Pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
 
 ---
 

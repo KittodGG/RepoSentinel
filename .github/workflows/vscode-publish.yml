@@ -1,0 +1,47 @@
+name: Publish VS Code extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type publish to confirm VS Code Marketplace publication"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Package and publish VS Code extension
+    if: ${{ inputs.confirm == 'publish' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and package VSIX
+        working-directory: packages/vscode
+        run: pnpm package
+
+      - name: Publish VSIX
+        working-directory: packages/vscode
+        run: pnpm exec vsce publish --packagePath reposentinel-diagnostics-*.vsix --pat "$VSCE_PAT"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

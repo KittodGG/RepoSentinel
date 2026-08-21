@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-beta.2 — 21 August 2026
+
+### Fixed
+
+- Fixed the bundled CLI direct-invocation guard so the npm-installed `reposentinel` binary executes correctly through npm’s symlinked bin path.
+
+### Released
+
+- Published `reposentinel@0.1.0-beta.2` to npm with the `beta` dist-tag.
+- Verified a clean registry install and confirmed `reposentinel --version` returns `0.1.0-beta.2`.
+
 ## 0.1.0-beta.1 — 20 August 2026
 
 ### Added

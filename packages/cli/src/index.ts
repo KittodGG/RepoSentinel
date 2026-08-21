@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
+import { realpathSync } from "node:fs";
 import { access, mkdir, readFile, readdir, watch as watchFiles, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
@@ -31,7 +32,7 @@ import {
   type Locale
 } from "@reposentinel/i18n";
 
-const VERSION = "0.1.0-beta.1";
+const VERSION = "0.1.0-beta.2";
 const profiles = ["public", "portfolio", "npm-package", "academic", "private-team", "mobile-app"] as const;
 const thresholds = ["critical", "error", "warning", "info"] as const;
 
@@ -591,6 +592,15 @@ export async function main(argv = process.argv): Promise<void> {
 }
 
 const currentFile = fileURLToPath(import.meta.url);
-if (process.argv[1] && resolve(process.argv[1]) === currentFile) {
+function isInvokedDirectly(invokedPath: string | undefined, modulePath: string): boolean {
+  if (!invokedPath) return false;
+  try {
+    return realpathSync(invokedPath) === realpathSync(modulePath);
+  } catch {
+    return resolve(invokedPath) === resolve(modulePath);
+  }
+}
+
+if (isInvokedDirectly(process.argv[1], currentFile)) {
   await main();
 }
