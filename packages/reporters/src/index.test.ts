@@ -134,6 +134,21 @@ describe("reporters", () => {
     expect(renderSarifReport(options)).toContain('"network": "disabled"');
   });
 
+  it("exposes bounded-scan state across report formats", () => {
+    const options = {
+      locale: "en" as const,
+      repository: "fixture",
+      profile: "public" as const,
+      findings: [],
+      threshold: "error" as const,
+      scanBudget: { maxFiles: 10, maxTotalBytes: 1000, filesConsidered: 10, textBytesCached: 1000, truncated: true }
+    };
+    expect(renderTerminalReport({ ...options, filesScanned: 10, ignoredCount: 0, color: false })).toContain("bounded");
+    expect(renderMarkdownReport(options)).toContain("Scan budget");
+    expect(renderJsonReport(options)).toContain('"truncated": true');
+    expect(renderHtmlReport(options)).toContain("bounded");
+  });
+
   it("renders a self-contained escaped HTML report", () => {
     const output = renderHtmlReport({
       locale: "en",

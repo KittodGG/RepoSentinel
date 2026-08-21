@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — post-1.0.0 hardening
+
+- Fixed repository `.gitignore` handling so ignored files remain metadata-visible and security detectors can inspect isolated text without exposing it to general rules.
+- Fixed multiline private-key detection, expanded IPv6 and IPv4-mapped SSRF blocking, transparent blocked-target reporting, deterministic custom-rule fingerprints, root-absolute Markdown link resolution, and default recommended ignores.
+- Fixed `--no-color` for both argument positions, `NO_COLOR`, non-TTY output, and report files; added scan-budget metadata to reports.
+- Added Windows CI coverage, portable script paths, Dependabot configuration, the public rule catalog, and a sanitized security-hardening summary.
+
 ## 1.0.0 — 21 August 2026
 
 ### Verified
@@ -12,7 +19,7 @@
 
 - Published `reposentinel@1.0.0` to npm under the `latest` dist-tag.
 - Verified `npm install reposentinel@latest` in a clean temporary prefix and confirmed `reposentinel --version` returns `1.0.0`.
-- Published the GitHub `v1.0.0` release from the verified source commit; repository visibility remains private pending separate approval.
+- Published the GitHub `v1.0.0` release from the verified source commit; the repository is public after explicit maintainer approval.
 
 ## 0.1.0-beta.2 — 21 August 2026
 

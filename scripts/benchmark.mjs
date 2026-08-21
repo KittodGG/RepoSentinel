@@ -1,8 +1,9 @@
 import { performance } from "node:perf_hooks";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = resolve(new URL("..", import.meta.url).pathname);
+const root = fileURLToPath(new URL("..", import.meta.url));
 const target = resolve(process.argv[2] ?? ".");
 const iterations = Number.parseInt(process.argv[3] ?? "5", 10);
 

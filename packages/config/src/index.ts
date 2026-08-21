@@ -48,7 +48,7 @@ export function defaultConfig(profile: RepositoryProfile = "public"): ResolvedCo
   return {
     profile,
     report: { formats: ["terminal", "markdown", "json"] },
-    ignore: [...defaultIgnore],
+    ignore: [...recommendedIgnore],
     rules: {},
     ciFailOn: "error",
     security: {

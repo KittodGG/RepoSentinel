@@ -26,7 +26,9 @@ describe("custom rule registry", () => {
     }]));
     const files = [{ relativePath: "docs/SECURITY.md", absolutePath: "/fixture/docs/SECURITY.md", kind: "text" as const, sizeBytes: 10, isIgnored: false }];
     expect(rule?.run(context(files, { "docs/SECURITY.md": "private report path" }))).toEqual([]);
-    expect(rule?.run(context(files, { "docs/SECURITY.md": "incomplete" }))[0]?.ruleId).toBe("custom.policy");
+    const finding = rule?.run(context(files, { "docs/SECURITY.md": "incomplete" }))[0];
+    expect(finding?.ruleId).toBe("custom.policy");
+    expect(finding?.fingerprint).toBe("custom.policy::0");
   });
 
   it("reports positive content matches when explicitly requested", () => {
@@ -40,7 +42,9 @@ describe("custom rule registry", () => {
       remediation: "Resolve the TODO marker."
     }]));
     const files = [{ relativePath: "docs/guide.md", absolutePath: "/fixture/docs/guide.md", kind: "text" as const, sizeBytes: 10, isIgnored: false }];
-    expect(rule?.run(context(files, { "docs/guide.md": "TODO: remove this" }))).toHaveLength(1);
+    const findings = rule?.run(context(files, { "docs/guide.md": "TODO: remove this" })) ?? [];
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.fingerprint).toBe("custom.forbidden-word:docs/guide.md:0");
     expect(rule?.run(context(files, { "docs/guide.md": "complete" }))).toEqual([]);
   });
 

@@ -1,4 +1,4 @@
-import type { Finding, RepositoryContext, RepositoryFile, RuleCategory, Severity } from "@reposentinel/core";
+import { fingerprintFor, type Finding, type RepositoryContext, type RepositoryFile, type RuleCategory, type Severity } from "@reposentinel/core";
 import type { RuleDefinition } from "./index.js";
 
 export type CustomRuleSpec = {
@@ -62,6 +62,7 @@ function createCustomRule(spec: CustomRuleSpec): RuleDefinition {
           severity: spec.severity,
           message: spec.message,
           path: file.relativePath,
+          fingerprint: fingerprintFor(spec.id, file.relativePath),
           remediation: spec.remediation,
           ...(spec.docsUrl ? { docsUrl: spec.docsUrl } : {})
         }));
@@ -72,6 +73,7 @@ function createCustomRule(spec: CustomRuleSpec): RuleDefinition {
         category,
         severity: spec.severity,
         message: spec.message,
+        fingerprint: fingerprintFor(spec.id),
         remediation: spec.remediation,
         ...(spec.docsUrl ? { docsUrl: spec.docsUrl } : {})
       };

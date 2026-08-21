@@ -3,7 +3,7 @@
 > **Tujuan dokumen:** menjadi sumber konteks utama untuk Project RepoSentinel. Baca dokumen ini sebelum merancang fitur, menulis kode, membuat issue, menyusun roadmap, atau mengambil keputusan produk.
 
 **Pemilik konsep:** Kitna Mahardika Favian / KittodGG  
-**Status:** Concept specification / MVP planning  
+**Status:** Stable 1.0.0 implementation with future roadmap items
 **Versi konteks:** 1.0  
 **Tanggal pembaruan:** 17 Agustus 2026  
 **Dokumen teknis lengkap:** `RepoSentinel_Product_Technical_Specification.docx`
@@ -14,13 +14,13 @@
 
 **RepoSentinel** adalah developer tool untuk memeriksa kesehatan sebuah repository sebelum repository tersebut dibagikan, dipublikasikan, dipamerkan sebagai portfolio, atau menerima kontribusi. Bentuk awalnya adalah **CLI lokal**, kemudian diperluas menjadi **GitHub Action**, dengan kemungkinan integrasi VS Code pada tahap berikutnya.
 
-RepoSentinel memeriksa dokumentasi, README, link, gambar, badge, metadata, package hygiene, konfigurasi, workflow CI, security hygiene dasar, dan kesiapan contributor. Tool ini menghasilkan finding yang actionable, health score, serta report dalam terminal, Markdown, JSON, dan kemudian SARIF.
+RepoSentinel memeriksa dokumentasi, README, link, gambar, badge, metadata, package hygiene, konfigurasi, workflow CI, security hygiene dasar, dan kesiapan contributor. Tool ini menghasilkan finding yang actionable, health score, serta report dalam terminal, Markdown, JSON, SARIF, dan HTML.
 
 > **Positioning utama:** “RepoSentinel — cek repository Anda sebelum orang lain menilainya.”
 
 > **Positioning bahasa Inggris:** “Make every repository ready to be understood, trusted, and shared.”
 
-RepoSentinel **belum merupakan package yang sudah dipublikasikan**. Semua nama package, command instalasi, URL action, dan contoh konfigurasi harus diperlakukan sebagai **target design** sampai benar-benar diimplementasikan dan diverifikasi.
+RepoSentinel `1.0.0` adalah package npm stable yang sudah dipublikasikan dan tersedia melalui `latest`. Command, URL action, dan contoh konfigurasi di dokumen ini harus tetap diverifikasi terhadap implementation sebelum perubahan berikutnya dirilis.
 
 ---
 
@@ -214,14 +214,14 @@ Setiap rule minimal memiliki:
 
 ```json
 {
-  "rule_id": "readme.quickstart",
+  "ruleId": "documentation.quickstart",
   "severity": "warning",
   "message": "README tidak memiliki quick start yang dapat dijalankan.",
   "path": "README.md",
   "line": 18,
   "evidence": "Tidak ditemukan heading install, setup, atau quick start.",
   "remediation": "Tambahkan langkah instalasi dan satu contoh command.",
-  "docs_url": "https://docs.reposentinel.dev/rules/readme.quickstart"
+  "docsUrl": "https://github.com/KittodGG/RepoSentinel/blob/main/docs/RULES.md#documentation.quickstart"
 }
 ```
 
@@ -229,7 +229,7 @@ Setiap rule minimal memiliki:
 
 ## 10. Target CLI dan Konfigurasi
 
-RepoSentinel belum dipublikasikan. Command berikut adalah **kontrak UX target**.
+RepoSentinel stable `1.0.0` sudah dipublikasikan ke npm dan GitHub. Command berikut adalah **kontrak UX yang diverifikasi**.
 
 ```bash
 npm install --global reposentinel
@@ -436,7 +436,7 @@ reposentinel/
 | 3. Rule pack | Docs, links, security, package rules. | Minimal 15 rule memiliki test dan remediation. |
 | 4. CI | GitHub Action dan SARIF. | PR dapat menampilkan annotation dan threshold exit. |
 | 5. Profiles | `public`, `portfolio`, `npm-package`. | False positive berkurang berdasarkan konteks. |
-| 6. Beta | Docs, demo, releases, issue templates. | Minimal 10 external users memberi feedback. |
+| 6. Pilot validation | Docs, demo, releases, issue templates. | External users memberi feedback dan stable release gate lulus. |
 
 ### P1/P2 backlog
 
@@ -514,7 +514,7 @@ Jumlah star boleh menjadi sinyal discovery, tetapi bukan satu-satunya target. Re
 - Pilihan Commander vs Oclif belum final.
 - Scope secret detection harus dibatasi agar tidak menjanjikan audit keamanan.
 - Apakah HTML report masuk P1 atau P2.
-- Apakah profile `mobile-app`, `academic`, dan `private-team` dibuat setelah beta.
+- Profile `mobile-app`, `academic`, dan `private-team` sudah tersedia; perluasan berikutnya tetap mengikuti roadmap production.
 - Apakah custom rule memakai JavaScript API, executable process, atau schema deklaratif.
 
 Saat ada ambiguitas, pilih opsi yang paling sederhana, deterministic, local-first, dan mudah diuji.

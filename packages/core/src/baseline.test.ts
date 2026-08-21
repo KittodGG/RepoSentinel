@@ -29,8 +29,10 @@ describe("baseline", () => {
     expect(filterBaselineFindings([finding], new Set(document.fingerprints))).toEqual([]);
   });
 
-  it("rejects critical findings from a baseline", () => {
-    expect(() => createBaselineDocument([{ ...finding, severity: "critical" }])).toThrow("cannot include critical findings");
+  it("rejects critical findings from a baseline unless explicitly allowed", () => {
+    const critical = { ...finding, severity: "critical" as const };
+    expect(() => createBaselineDocument([critical])).toThrow("--allow-critical");
+    expect(createBaselineDocument([critical], { allowCritical: true }).fingerprints).toEqual([critical.fingerprint]);
   });
 
   it("writes and loads a repository-local baseline", async () => {

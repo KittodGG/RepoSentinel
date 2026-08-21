@@ -98,10 +98,10 @@ For secret exposure, arbitrary code execution, path escape, accidental network a
 [ ] Performance has no unexplained regression
 [ ] Independent pilot metrics meet the agreed threshold
 [ ] README and governance links are direct and bilingual
-[ ] Stable artifact, Git tag, changelog, checksum, and source commit are recorded
+[x] Stable artifact, Git tag, changelog, checksum, and source commit are recorded
 [ ] Rollback and incident runbooks are tested
-[ ] Maintainer gives explicit stable-release approval
-[ ] Repository visibility remains private until a separate explicit approval
+[x] Maintainer gives explicit stable-release approval
+[x] Repository visibility review completed; repository is public by explicit maintainer approval
 ```
 
 ## Bahasa Indonesia

@@ -51,6 +51,7 @@ type CheckOptions = {
   watch?: boolean;
   rulesFile?: string;
   network?: boolean;
+  allowCritical?: boolean;
 };
 
 function explicitLocale(argv: string[]): string | undefined {
@@ -62,6 +63,11 @@ function explicitLocale(argv: string[]): string | undefined {
 
 function colorize(enabled: boolean, color: (value: string) => string, value: string): string {
   return enabled ? color(value) : value;
+}
+
+function resolveColor(requested: boolean | undefined, writingToFile = false): boolean {
+  if (requested === false || process.env.NO_COLOR !== undefined || writingToFile || !process.stdout.isTTY) return false;
+  return true;
 }
 
 function resolveInsideRepository(root: string, candidate: string): string {
@@ -153,13 +159,13 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
     await handleAutofix(scan.root, scan.context, scan.findings, options.fix, options.applyFix === true);
     const changedOptions = scan.changedSince ? { changedSince: scan.changedSince, changedFiles: scan.changedFiles ?? [] } : {};
     const renderReport = (format: OutputFormat): string => format === "json"
-      ? renderJsonReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, ...changedOptions })
+      ? renderJsonReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, scanBudget: scan.context.scanBudget, ...changedOptions })
       : format === "markdown"
-        ? renderMarkdownReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, ...changedOptions })
+        ? renderMarkdownReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, scanBudget: scan.context.scanBudget, ...changedOptions })
         : format === "sarif"
-          ? renderSarifReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, ...changedOptions })
+          ? renderSarifReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, scanBudget: scan.context.scanBudget, ...changedOptions })
           : format === "html"
-            ? renderHtmlReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, ...changedOptions })
+            ? renderHtmlReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, network: scan.context.config.security.network, scanBudget: scan.context.scanBudget, ...changedOptions })
             : renderTerminalReportExternal({
               locale,
               repository: basename(scan.root),
@@ -170,7 +176,8 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
               threshold,
               ...changedOptions,
               network: scan.context.config.security.network,
-              color: options.color !== false
+              scanBudget: scan.context.scanBudget,
+              color: resolveColor(options.color, Boolean(options.output))
             });
     if (options.output) {
       const reportPath = resolve(options.output);
@@ -196,7 +203,7 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
     return summary.exitCode;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`${colorize(options.color !== false, pc.red, "×")} ${message}\n`);
+    process.stderr.write(`${colorize(resolveColor(options.color), pc.red, "×")} ${message}\n`);
     return 2;
   }
 }
@@ -301,16 +308,16 @@ async function runInit(locale: Locale, target: string, force: boolean, profile: 
   return 0;
 }
 
-async function runBaselineCreate(locale: Locale, target: string, profile: RepositoryProfile, output?: string): Promise<number> {
+async function runBaselineCreate(locale: Locale, target: string, profile: RepositoryProfile, output?: string, allowCritical = false, requestedColor?: boolean): Promise<number> {
   const { t } = createTranslator(locale);
   try {
     const scan = await collectScan(target, profile, "error", false);
-    const path = await writeBaseline(scan.root, output ?? ".reposentinel/baseline.json", scan.findings);
+    const path = await writeBaseline(scan.root, output ?? ".reposentinel/baseline.json", scan.findings, { allowCritical });
     process.stdout.write(`${t("baseline.created", { path, count: scan.findings.length })}\n`);
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`${colorize(true, pc.red, "×")} ${message}\n`);
+    process.stderr.write(`${colorize(resolveColor(requestedColor), pc.red, "×")} ${message}\n`);
     return 2;
   }
 }
@@ -334,7 +341,8 @@ function renderRuleExplanation(locale: Locale, ruleId: string): string | undefin
     `${t("explain.category")}: ${rule.category}`,
     `${t("explain.severity")}: ${rule.defaultSeverity}`,
     `Profiles: ${rule.profiles.join(", ")}`,
-    `${t("explain.remediation")}: see finding-specific remediation in the report.`
+    `${t("explain.remediation")}: see finding-specific remediation in the report.`,
+    `Docs: https://github.com/KittodGG/RepoSentinel/blob/main/docs/RULES.md#${rule.id}`
   ].join("\n") + "\n";
 }
 
@@ -346,7 +354,7 @@ async function readDashboardReports(directory: string) {
   return reports;
 }
 
-function buildProgram(locale: Locale): Command {
+function buildProgram(locale: Locale, noColor = false): Command {
   const { t } = createTranslator(locale);
   const program = new Command();
   program
@@ -372,7 +380,6 @@ function buildProgram(locale: Locale): Command {
     .option("--watch", "Watch repository files and rerun the scan after debounced changes")
     .option("--rules-file <file>", "Load a declarative JSON custom-rule registry inside the repository")
     .option("--network", "Opt in to bounded HTTP link checks; disabled by default")
-    .option("--no-color", "Disable ANSI color output")
     .action(async (target = ".", options: CheckOptions) => {
       if (!profiles.includes(options.profile as RepositoryProfile)) {
         process.stderr.write(`Unknown profile: ${options.profile}. Use: ${profiles.join(", ")}\n`);
@@ -395,6 +402,7 @@ function buildProgram(locale: Locale): Command {
         return;
       }
       const selected = resolveLocale(options.lang ?? locale);
+      if (noColor) options.color = false;
       process.exitCode = options.watch ? await runWatch(selected, target, options) : await runCheck(selected, target, options);
     });
 
@@ -438,7 +446,8 @@ function buildProgram(locale: Locale): Command {
     .option("--profile <profile>", "Repository profile: public, portfolio, npm-package, academic, private-team, mobile-app", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .option("--output <file>", "Baseline output path", ".reposentinel/baseline.json")
-    .action(async (action: string, target = ".", options: { profile?: string; lang?: string; output?: string }) => {
+    .option("--allow-critical", "Allow critical findings in the baseline; use only after explicit review")
+    .action(async (action: string, target = ".", options: { profile?: string; lang?: string; output?: string; allowCritical?: boolean }) => {
       if (action !== "create") {
         process.stderr.write(`Unsupported baseline action: ${action}. Use: create.\n`);
         process.exitCode = 2;
@@ -451,7 +460,7 @@ function buildProgram(locale: Locale): Command {
         return;
       }
       const selected = resolveLocale(options.lang ?? locale);
-      process.exitCode = await runBaselineCreate(selected, target, selectedProfile as RepositoryProfile, options.output);
+      process.exitCode = await runBaselineCreate(selected, target, selectedProfile as RepositoryProfile, options.output, options.allowCritical === true, noColor);
     });
 
   program
@@ -469,7 +478,7 @@ function buildProgram(locale: Locale): Command {
         process.stdout.write(`Dashboard written to ${output} (${reports.length} report(s))\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        process.stderr.write(`${colorize(true, pc.red, "×")} ${message}\n`);
+        process.stderr.write(`${colorize(resolveColor(noColor), pc.red, "×")} ${message}\n`);
         process.exitCode = 2;
       }
     });
@@ -510,7 +519,9 @@ export async function main(argv = process.argv): Promise<void> {
     return;
   }
   const locale = resolveLocale(explicit);
-  await buildProgram(locale).parseAsync(argv);
+  const noColor = argv.includes("--no-color");
+  const parseArgv = argv.filter((value) => value !== "--no-color");
+  await buildProgram(locale, noColor).parseAsync(parseArgv);
 }
 
 const currentFile = fileURLToPath(import.meta.url);

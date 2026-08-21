@@ -33,18 +33,26 @@ describe("safe discovery", () => {
     expect(context.ignoredCount).toBeGreaterThanOrEqual(2);
   });
 
-  it("honors repository .gitignore patterns in addition to configured ignores", async () => {
+  it("preserves repository-gitignored files for security scanning but not general text rules", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-gitignore-"));
     await mkdir(join(root, "generated"));
-    await writeFile(join(root, ".gitignore"), "generated/\n");
+    await mkdir(join(root, "secrets"));
+    await writeFile(join(root, ".gitignore"), "generated/\nsecrets/\n.env\n");
     await writeFile(join(root, "generated", "output.txt"), "ignored");
+    await writeFile(join(root, "secrets", "deploy.env"), "TOKEN=synthetic");
+    await writeFile(join(root, ".env"), "TOKEN=synthetic");
     await writeFile(join(root, "README.md"), "# Demo");
-    const context = await createRepositoryContext(root, "public", config);
-    expect(context.files.some((file) => file.relativePath === "generated/output.txt")).toBe(false);
-    expect(context.ignoredCount).toBeGreaterThanOrEqual(1);
+    const testConfig = { ...config, ignore: ["node_modules/**"] };
+    const context = await createRepositoryContext(root, "public", testConfig);
+    expect(context.files.find((file) => file.relativePath === "generated/output.txt")?.isIgnored).toBe(true);
+    expect(context.files.find((file) => file.relativePath === "secrets/deploy.env")?.isIgnored).toBe(true);
+    expect(context.files.find((file) => file.relativePath === ".env")?.isIgnored).toBe(true);
+    expect(context.textCache.has("secrets/deploy.env")).toBe(false);
+    expect(context.securityTextCache?.has("secrets/deploy.env")).toBe(true);
+    expect(context.ignoredCount).toBeGreaterThanOrEqual(3);
   });
 
-  it("records symlinks without following them", async () => {
+  it.skipIf(process.platform === "win32")("records symlinks without following them", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-symlink-"));
     const outside = await mkdtemp(join(tmpdir(), "reposentinel-outside-"));
     await writeFile(join(outside, "secret.txt"), "do not follow");
@@ -70,12 +78,15 @@ describe("safe discovery", () => {
     expect(context.git?.available).toBe(true);
   });
 
-  it("enforces aggregate file budgets", async () => {
+  it("degrades gracefully when aggregate scan budgets are reached", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-budget-"));
     await writeFile(join(root, "a.txt"), "12345");
     await writeFile(join(root, "b.txt"), "67890");
-    await expect(createRepositoryContext(root, "public", config, { maxFiles: 1 })).rejects.toThrow("file limit");
-    await expect(createRepositoryContext(root, "public", config, { maxTotalBytes: 5 })).rejects.toThrow("aggregate scan size limit");
+    const fileLimited = await createRepositoryContext(root, "public", config, { maxFiles: 1 });
+    expect(fileLimited.scanBudget?.truncated).toBe(true);
+    const byteLimited = await createRepositoryContext(root, "public", config, { maxTotalBytes: 5 });
+    expect(byteLimited.scanBudget?.truncated).toBe(true);
+    expect(byteLimited.files.length).toBeGreaterThan(0);
   });
 
   it("rejects unsafe Git base refs", async () => {

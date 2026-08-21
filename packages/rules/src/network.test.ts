@@ -38,12 +38,13 @@ describe("network link checks", () => {
     expect(JSON.stringify(findings)).not.toContain("token=do-not-leak");
   });
 
-  it("blocks private, metadata, and mapped loopback addresses before fetch", async () => {
+  it("blocks private, metadata, expanded IPv6, and mapped addresses before fetch", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ status: 200 });
     vi.stubGlobal("fetch", fetchMock);
     const resolveHostname = vi.fn().mockResolvedValue([{ address: "10.0.0.7", family: 4 }]);
-    const findings = await runNetworkLinkChecks(context("[metadata](http://169.254.169.254/latest)\n[private](https://internal.example)\n[mapped](http://[::ffff:127.0.0.1]/health)"), { enabled: true, resolveHostname });
-    expect(findings).toEqual([]);
+    const findings = await runNetworkLinkChecks(context("[metadata](http://169.254.169.254/latest)\n[private](https://internal.example)\n[mapped](http://[::ffff:127.0.0.1]/health)\n[expanded-loopback](http://[0:0:0:0:0:0:0:1]/health)\n[expanded-metadata](http://[0:0:0:0:0:ffff:a9fe:a9fe]/latest/meta-data/)"), { enabled: true, resolveHostname });
+    expect(findings).toHaveLength(5);
+    expect(findings.every((finding) => finding.severity === "info")).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(resolveHostname).toHaveBeenCalledWith("internal.example");
   });
@@ -52,7 +53,8 @@ describe("network link checks", () => {
     const fetchMock = vi.fn().mockResolvedValue({ status: 200 });
     vi.stubGlobal("fetch", fetchMock);
     const source = ["http://localhost:3000", ...Array.from({ length: 4 }, (_, index) => `https://example.com/${index}`)].map((url) => `[link](${url})`).join("\n");
-    await runNetworkLinkChecks(context(source), { enabled: true, maxLinks: 2 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const findings = await runNetworkLinkChecks(context(source), { enabled: true, maxLinks: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(findings.some((finding) => finding.evidence?.includes("localhost:3000"))).toBe(true);
   });
 });

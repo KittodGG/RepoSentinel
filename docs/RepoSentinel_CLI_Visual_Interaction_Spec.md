@@ -162,7 +162,8 @@ Ketika pengguna menekan `Enter`, panel detail menggantikan list atau muncul seba
 │  and one copy-paste run command.                               │
 │                                                                │
 │  Rule docs                                                      │
-│  https://docs.reposentinel.dev/rules/documentation.quickstart  │
+│  GitHub catalog: docs/RULES.md                                  │
+│  Anchor: #documentation.quickstart                              │
 │                                                                │
 ╰────────────────────────────────────────────────────────────────╯
 

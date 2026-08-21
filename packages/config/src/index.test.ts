@@ -12,6 +12,8 @@ describe("configuration", () => {
     expect(config.security.scanHistory).toBe(false);
     expect(config.security.redactFindings).toBe(true);
     expect(config.ciFailOn).toBe("error");
+    expect(config.ignore).toContain("build/**");
+    expect(config.ignore).toContain("target/**");
   });
 
   it("accepts all supported named profiles with public baseline rules", async () => {

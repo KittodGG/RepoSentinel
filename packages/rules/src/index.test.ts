@@ -23,12 +23,13 @@ function config(profile: RepositoryContext["profile"]): ResolvedConfig {
   };
 }
 
-function context(profile: RepositoryContext["profile"], files: RepositoryFile[], text: Record<string, string>): RepositoryContext {
+function context(profile: RepositoryContext["profile"], files: RepositoryFile[], text: Record<string, string>, securityText: Record<string, string> = {}): RepositoryContext {
   return {
     root: "/fixture",
     profile,
     files,
     textCache: new Map(Object.entries(text)),
+    ...(Object.keys(securityText).length > 0 ? { securityTextCache: new Map(Object.entries(securityText)) } : {}),
     config: config(profile)
   };
 }
@@ -55,7 +56,7 @@ describe("rules", () => {
       "public",
       [file("deploy/id_rsa"), file("src/config.ts")],
       {
-        "deploy/id_rsa": "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n-----END OPENSSH PRIVATE KEY-----",
+        "deploy/id_rsa": "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n-----END OPENSSH PRIVATE KEY-----",
         "src/config.ts": `const token = '${["ghp_", "1234567890abcdef"].join("")}';`
       }
     ));
@@ -104,7 +105,7 @@ describe("rules", () => {
   it("detects secrets in README and reports multiple credential matches safely", () => {
     const result = runRules(context("public", [file("README.md"), file("docs/deploy.md")], {
       "README.md": `Use ${["ghp_", "1234567890abcdef"].join("")} and ${["AKIA", "1234567890ABCDEF"].join("")} in this example.`,
-      "docs/deploy.md": "-----BEGIN RSA PRIVATE KEY-----\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n-----END RSA PRIVATE KEY-----"
+      "docs/deploy.md": "-----BEGIN RSA PRIVATE KEY-----\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n-----END RSA PRIVATE KEY-----"
     }));
     const credentialFindings = result.filter((finding) => finding.ruleId === "security.credential-pattern");
     expect(credentialFindings).toHaveLength(2);
@@ -113,7 +114,14 @@ describe("rules", () => {
     expect(JSON.stringify(result)).not.toContain("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
-  it("reports detached HEAD only when local Git metadata is available", () => {
+  it("detects secrets from repository-gitignored security text", () => {
+    const syntheticToken = ["ghp_", "1234567890abcdef"].join("");
+    const result = runRules(context("public", [file(".env", "text", 20, false), file("README.md")], { "README.md": "# Demo" }, { ".env": `TOKEN=\"${syntheticToken}\"` }));
+    expect(result.some((finding) => finding.ruleId === "security.env-file")).toBe(true);
+    expect(result.some((finding) => finding.ruleId === "security.credential-pattern")).toBe(true);
+  });
+
+  it("reports detached HEAD only when local Git metadata is available", async () => {
     const detached = context("public", [file("README.md"), file(".gitignore")], {});
     detached.git = { available: true };
     expect(runRules(detached).map((finding) => finding.ruleId)).toContain("branch.default");
@@ -134,6 +142,13 @@ describe("rules", () => {
       "README.md": "# RepoSentinel\n\n[Guide](docs/guide.md)",
       ".github/ISSUE_TEMPLATE/documentation.md": "[Security](../../SECURITY.md)\n[Templates](./)",
       "docs/guide.md": "[Root](../README.md)\n[Templates](../.github/ISSUE_TEMPLATE/)"
+    }));
+    expect(result.filter((finding) => finding.ruleId === "links.valid")).toEqual([]);
+  });
+
+  it("resolves repository-root absolute Markdown links", () => {
+    const result = runRules(context("public", [file("README.md"), file("docs/guide.md"), file(".gitignore")], {
+      "README.md": "# Demo\n\n[Guide](/docs/guide.md)"
     }));
     expect(result.filter((finding) => finding.ruleId === "links.valid")).toEqual([]);
   });

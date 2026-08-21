@@ -4,7 +4,7 @@
 
 ### Repository visibility and release policy
 
-RepoSentinel remains private while production-readiness, documentation, stable-release, and external-pilot gates are being completed. Visibility must not be changed as part of an automated release. The maintainer must explicitly approve the transition to public after reviewing the final readiness report, security policy, license, contribution paths, and release artifacts.
+RepoSentinel is public after the maintainer explicitly approved the visibility transition following review of the final readiness report, security policy, license, contribution paths, and release artifacts. Future visibility changes must not be performed as part of an automated release.
 
 After the repository becomes public, the project must continue to preserve the same local-first and security boundaries. Making the repository public does not mean that source code, reports, or user data are uploaded by the scanner during local execution.
 
@@ -36,11 +36,11 @@ GitHub returned HTTP 403 for branch-protection operations because the repository
 
 This is a GitHub account/plan limitation, not a RepoSentinel code or CI failure. Until the feature is available, the project relies on the Pull Request template, CODEOWNERS review requests, the successful Quality workflow, the release gate, and maintainer discipline.
 
-### Public-visibility checklist
+### Public-visibility maintenance checklist
 
-Before changing visibility from private to public, the maintainer must confirm that no secret, private key, proprietary source, private URL, personal data, local path, temporary artifact, or unredacted report exists in Git history or the current tree. The maintainer should also review GitHub Actions secrets, issue templates, Discussions, releases, package metadata, README links, license files, and security reporting links.
+After the visibility change, the maintainer must continue to review that no secret, private key, proprietary source, private URL, personal data, local path, temporary artifact, or unredacted report is added to Git history or the current tree. The maintainer should also periodically review GitHub Actions secrets, issue templates, Discussions, releases, package metadata, README links, license files, and security reporting links.
 
-Visibility change must be followed by an external-view verification: open the repository in a logged-out browser, verify that the README renders, confirm that every governance link works, confirm that issue templates are visible, and verify that the stable package/release links point to the intended version.
+The completed visibility change was followed by external-view verification: the public repository, README, governance links, issue templates, stable package, and release links were checked for the intended stable version.
 
 ### Emergency changes
 
@@ -50,7 +50,7 @@ If an urgent security fix requires bypassing ordinary review, the maintainer mus
 
 ### Kebijakan visibility dan release
 
-RepoSentinel tetap private selama production-readiness, dokumentasi, stable-release, dan external-pilot gate masih diselesaikan. Visibility tidak boleh diubah sebagai bagian dari automated release. Maintainer harus memberikan persetujuan eksplisit untuk transisi ke public setelah meninjau final readiness report, security policy, license, jalur kontribusi, dan release artifact.
+RepoSentinel sudah public setelah maintainer memberikan persetujuan eksplisit untuk transisi visibility setelah meninjau final readiness report, security policy, license, jalur kontribusi, dan release artifact. Perubahan visibility berikutnya tidak boleh dilakukan sebagai bagian dari automated release.
 
 Setelah repository menjadi public, project tetap wajib mempertahankan boundary local-first dan keamanan yang sama. Repository public tidak berarti scanner meng-upload source code, report, atau data pengguna saat local execution.
 
@@ -82,11 +82,11 @@ GitHub mengembalikan HTTP 403 untuk operasi branch protection karena repository 
 
 Ini adalah limitasi account/plan GitHub, bukan kegagalan code atau CI RepoSentinel. Sampai fitur tersedia, project mengandalkan Pull Request template, review request dari CODEOWNERS, Quality workflow yang lulus, release gate, dan disiplin maintainer.
 
-### Checklist sebelum visibility public
+### Checklist pemeliharaan setelah visibility public
 
-Sebelum mengubah visibility dari private menjadi public, maintainer harus memastikan tidak ada secret, private key, proprietary source, private URL, personal data, local path, temporary artifact, atau report yang belum disanitasi di Git history maupun current tree. Maintainer juga perlu meninjau GitHub Actions secrets, issue template, Discussions, releases, package metadata, link README, license file, dan security reporting link.
+Setelah perubahan visibility, maintainer harus terus memastikan tidak ada secret, private key, proprietary source, private URL, personal data, local path, temporary artifact, atau report yang belum disanitasi ditambahkan ke Git history maupun current tree. Maintainer juga perlu meninjau secara berkala GitHub Actions secrets, issue template, Discussions, releases, package metadata, link README, license file, dan security reporting link.
 
-Perubahan visibility harus diikuti external-view verification: buka repository menggunakan browser yang tidak login, pastikan README ter-render, semua governance link berfungsi, issue template terlihat, dan link package/release stable menunjuk ke version yang benar.
+Perubahan visibility telah diikuti external-view verification: repository public, README, governance link, issue template, package stable, dan release link telah diperiksa dan menunjuk ke version stable yang benar.
 
 ### Emergency change
 

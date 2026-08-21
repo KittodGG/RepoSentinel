@@ -80,6 +80,7 @@ Options:
       --format <format>        terminal | markdown | json | sarif | html
       --config <path>          Configuration file path
       --no-color                Disable terminal colors
+      --allow-critical          Allow critical findings in a baseline after explicit review
   -v, --verbose                Show discovery and rule statistics
   -h, --help                   Show help
 
@@ -846,7 +847,7 @@ Security and network
   Network is not required for this rule.
 
 Documentation
-  https://docs.reposentinel.dev/rules/documentation.quickstart
+  https://github.com/KittodGG/RepoSentinel/blob/main/docs/RULES.md#documentation.quickstart
 
 Exit code: 0
 ```
@@ -992,6 +993,9 @@ Report written to /workspace/project/report.json
 
 ```text
 $ reposentinel baseline create .
+
+# Exceptional case only: include reviewed critical findings
+$ reposentinel baseline create . --allow-critical
 
 Baseline created at /workspace/project/.reposentinel/baseline.json (9 findings)
 ```

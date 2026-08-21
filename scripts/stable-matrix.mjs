@@ -2,8 +2,9 @@ import { readFile, rm, mkdtemp, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const root = resolve(new URL("..", import.meta.url).pathname);
+const root = fileURLToPath(new URL("..", import.meta.url));
 const cli = join(root, "packages", "cli", "dist", "index.js");
 const cases = [
   { name: "clean-public", path: "fixtures/clean-public", expected: 0 },
@@ -13,9 +14,9 @@ const cases = [
   { name: "security-private-key", path: "fixtures/security-private-key", expected: 1 }
 ];
 
-function run(args) {
+function run(args, environment = {}) {
   return new Promise((resolveRun, reject) => {
-    execFile(process.execPath, [cli, ...args], { cwd: root, maxBuffer: 4 * 1024 * 1024 }, (error, stdout, stderr) => {
+    execFile(process.execPath, [cli, ...args], { cwd: root, env: { ...process.env, ...environment }, maxBuffer: 4 * 1024 * 1024 }, (error, stdout, stderr) => {
       if (error && typeof error.code !== "number") {
         reject(error);
         return;
@@ -40,6 +41,15 @@ try {
     await writeFile(join(staging, `${testCase.name}.json`), first.stdout);
     rows.push({ name: testCase.name, exitCode: first.code, score: report.score, findings: report.findings.length, schema: report.schemaVersion });
   }
+  const noColorAfter = await run(["check", join(root, "fixtures/clean-public"), "--profile", "public", "--format", "terminal", "--no-color"]);
+  const noColorBefore = await run(["--no-color", "check", join(root, "fixtures/clean-public"), "--profile", "public", "--format", "terminal"]);
+  const noColorEnv = await run(["check", join(root, "fixtures/clean-public"), "--profile", "public", "--format", "terminal"], { NO_COLOR: "1" });
+  if ([noColorAfter, noColorBefore, noColorEnv].some((result) => /\u001b\[/u.test(`${result.stdout}${result.stderr}`))) throw new Error("color matrix: ANSI escape sequence leaked");
+  const terminalPath = join(staging, "terminal-report.txt");
+  const fileReport = await run(["check", join(root, "fixtures/clean-public"), "--profile", "public", "--format", "terminal", "--output", terminalPath]);
+  const fileContents = await readFile(terminalPath, "utf8");
+  if (/\u001b\[/u.test(fileContents) || fileReport.code !== 0) throw new Error("color matrix: file report was not ANSI-free");
+
   const localeEn = await run(["check", join(root, "fixtures/clean-public"), "--profile", "public", "--lang", "en", "--format", "json", "--no-color"]);
   const localeId = await run(["check", join(root, "fixtures/clean-public"), "--profile", "public", "--lang", "id", "--format", "json", "--no-color"]);
   if (localeEn.code !== 0 || localeId.code !== 0) throw new Error("locale matrix: unexpected nonzero exit");

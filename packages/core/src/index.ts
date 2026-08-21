@@ -46,11 +46,22 @@ export type GitMetadata = {
   defaultBranch?: string;
 };
 
+export type ScanBudget = {
+  maxFiles: number;
+  maxTotalBytes: number;
+  filesConsidered: number;
+  textBytesCached: number;
+  truncated: boolean;
+};
+
 export type RepositoryContext = {
   root: string;
   profile: RepositoryProfile;
   files: readonly RepositoryFile[];
   textCache: ReadonlyMap<string, string>;
+  /** Text from ignored files is isolated for security detectors only. */
+  securityTextCache?: ReadonlyMap<string, string>;
+  scanBudget?: ScanBudget;
   config: ResolvedConfig;
   git?: GitMetadata;
 };

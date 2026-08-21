@@ -4,7 +4,7 @@
 
 Thank you for helping improve RepoSentinel. RepoSentinel is **CLI-first, local-first, deterministic, explainable, and safe by default**. A good contribution adds value without weakening trustworthy output, repository privacy, compatibility, or the contributor experience.
 
-The project is currently private while production-readiness and documentation gates are being completed. The contribution process is public and ready to review through the [Governance Hub](GOVERNANCE.md). Repository visibility will change only after explicit maintainer approval.
+The project is public following the stable 1.0.0 release. The contribution process is documented through the [Governance Hub](GOVERNANCE.md), and all contributors must follow the security, privacy, testing, and review boundaries below.
 
 ### 1. Choose the right path
 

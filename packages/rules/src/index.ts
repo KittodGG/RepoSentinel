@@ -38,24 +38,29 @@ function finding(
     category: rule.category,
     severity,
     fingerprint: fingerprintFor(rule.id, path, line),
-    docsUrl: `https://docs.reposentinel.dev/rules/${rule.id}`
+    docsUrl: `https://github.com/KittodGG/RepoSentinel/blob/main/docs/RULES.md#${rule.id}`
   };
 }
 
 function fileExists(context: RepositoryContext, path: string): boolean {
-  return context.files.some((file) => file.relativePath === path && file.kind !== "directory");
+  return context.files.some((file) => file.relativePath === path && file.kind !== "directory" && !file.isIgnored);
+}
+
+function securityText(context: RepositoryContext): ReadonlyMap<string, string> {
+  return new Map([...context.textCache.entries(), ...(context.securityTextCache?.entries() ?? [])]);
 }
 
 function resolveRepositoryReference(sourcePath: string, target: string): string {
   const normalizedTarget = target.split(/[?#]/u, 1)[0]?.trim() ?? "";
-  if (!normalizedTarget || normalizedTarget.startsWith("/")) return normalizedTarget;
-  return posix.normalize(posix.join(posix.dirname(sourcePath), normalizedTarget));
+  if (!normalizedTarget) return "";
+  const repositoryTarget = normalizedTarget.startsWith("/") ? normalizedTarget.slice(1) : posix.join(posix.dirname(sourcePath), normalizedTarget);
+  return posix.normalize(repositoryTarget).replace(/^\.\//u, "");
 }
 
 function repositoryPathExists(context: RepositoryContext, path: string): boolean {
   const normalized = path.replace(/\/$/u, "");
-  return context.files.some((file) => file.relativePath === normalized)
-    || context.files.some((file) => file.relativePath.startsWith(`${normalized}/`));
+  return context.files.some((file) => file.relativePath === normalized && !file.isIgnored)
+    || context.files.some((file) => file.relativePath.startsWith(`${normalized}/`) && !file.isIgnored);
 }
 
 function firstTextLine(context: RepositoryContext, path: string, predicate: (line: string) => boolean): number | undefined {
@@ -183,8 +188,8 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
       const findings: Finding[] = [];
-      for (const [path, source] of context.textCache.entries()) {
-        const privateKeyPattern = /-----BEGIN [A-Z ]*PRIVATE KEY-----\s*[A-Za-z0-9+/=]{20,}\s*-----END [A-Z ]*PRIVATE KEY-----/gu;
+      for (const [path, source] of securityText(context).entries()) {
+        const privateKeyPattern = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----\s*(?:[A-Za-z0-9+/=]{20,}\s*)+-----END [A-Z0-9 ]*PRIVATE KEY-----/gu;
         for (const match of source.matchAll(privateKeyPattern)) {
           const matchIndex = match.index ?? 0;
           const line = source.slice(0, matchIndex).split(/\r?\n/u).length;
@@ -210,7 +215,7 @@ export const rules: readonly RuleDefinition[] = [
     run(context) {
       const findings: Finding[] = [];
       const pattern = /\b(?:ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_\-]{8,}/gu;
-      for (const [path, source] of context.textCache.entries()) {
+      for (const [path, source] of securityText(context).entries()) {
         for (const [lineIndex, sourceLine] of source.split(/\r?\n/u).entries()) {
           const matches = [...sourceLine.matchAll(pattern)];
           for (const match of matches) {
@@ -237,7 +242,7 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
-      const lockfiles = context.files.map((file) => file.relativePath).filter((path) => ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock"].includes(path));
+      const lockfiles = context.files.filter((file) => !file.isIgnored).map((file) => file.relativePath).filter((path) => ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock"].includes(path));
       return lockfiles.length <= 1
         ? []
         : [finding(this, context, {
@@ -393,7 +398,7 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["portfolio"],
     run(context) {
       const readme = context.textCache.get("README.md") ?? "";
-      const visible = /(^|\n)#+\s*(live\s+demo|demo|preview)\b/iu.test(readme) || /https?:\/\/[^\s)]+/iu.test(readme) || context.files.some((file) => /(^|\/)(demo|preview)(\/|\.|$)/iu.test(file.relativePath));
+      const visible = /(^|\n)#+\s*(live\s+demo|demo|preview)\b/iu.test(readme) || /https?:\/\/[^\s)]+/iu.test(readme) || context.files.some((file) => !file.isIgnored && /(^|\/)(demo|preview)(\/|\.|$)/iu.test(file.relativePath));
       return visible
         ? []
         : [finding(this, context, {
@@ -442,7 +447,7 @@ export const rules: readonly RuleDefinition[] = [
     run(context) {
       const thresholdBytes = 5 * 1024 * 1024;
       return context.files
-        .filter((file) => file.isTracked === true && file.sizeBytes > thresholdBytes)
+        .filter((file) => !file.isIgnored && file.isTracked === true && file.sizeBytes > thresholdBytes)
         .map((file) => finding(this, context, {
           path: file.relativePath,
           message: "A tracked file exceeds the 5 MiB repository hygiene threshold.",
@@ -459,7 +464,7 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
       return context.files
-        .filter((file) => file.isTracked === true && isLikelyGeneratedPath(file.relativePath))
+        .filter((file) => !file.isIgnored && file.isTracked === true && isLikelyGeneratedPath(file.relativePath))
         .map((file) => finding(this, context, {
           path: file.relativePath,
           message: "A generated-looking file is tracked by Git.",
@@ -490,7 +495,7 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "info",
     profiles: ["public"],
     run(context) {
-      const present = fileExists(context, ".github/ISSUE_TEMPLATE.md") || context.files.some((file) => file.relativePath.startsWith(".github/ISSUE_TEMPLATE/"));
+      const present = fileExists(context, ".github/ISSUE_TEMPLATE.md") || context.files.some((file) => !file.isIgnored && file.relativePath.startsWith(".github/ISSUE_TEMPLATE/"));
       return present
         ? []
         : [finding(this, context, {
@@ -506,7 +511,7 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["public", "npm-package"],
     run(context) {
-      const workflowPaths = context.files.filter((file) => /^\.github\/workflows\/[^/]+\.(yml|yaml)$/u.test(file.relativePath));
+      const workflowPaths = context.files.filter((file) => !file.isIgnored && /^\.github\/workflows\/[^/]+\.(yml|yaml)$/u.test(file.relativePath));
       return workflowPaths.flatMap((file) => {
         const source = context.textCache.get(file.relativePath) ?? "";
         return /(^|\n)permissions\s*:/mu.test(source)

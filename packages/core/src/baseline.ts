@@ -19,9 +19,9 @@ function safeBaselinePath(root: string, baselinePath: string): string {
   return resolvedPath;
 }
 
-export function createBaselineDocument(findings: readonly Finding[]): BaselineDocument {
-  if (findings.some((finding) => finding.severity === "critical")) {
-    throw new Error("Baseline cannot include critical findings.");
+export function createBaselineDocument(findings: readonly Finding[], options: { allowCritical?: boolean } = {}): BaselineDocument {
+  if (!options.allowCritical && findings.some((finding) => finding.severity === "critical")) {
+    throw new Error("Baseline cannot include critical findings unless --allow-critical is explicitly selected.");
   }
   return {
     schemaVersion: BASELINE_SCHEMA,
@@ -47,9 +47,9 @@ export async function loadBaseline(root: string, baselinePath: string): Promise<
   return new Set(parsed.fingerprints);
 }
 
-export async function writeBaseline(root: string, baselinePath: string, findings: readonly Finding[]): Promise<string> {
+export async function writeBaseline(root: string, baselinePath: string, findings: readonly Finding[], options: { allowCritical?: boolean } = {}): Promise<string> {
   const path = safeBaselinePath(root, baselinePath);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(createBaselineDocument(findings), null, 2)}\n`, "utf8");
+  await writeFile(path, `${JSON.stringify(createBaselineDocument(findings, options), null, 2)}\n`, "utf8");
   return path;
 }

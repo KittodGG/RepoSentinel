@@ -47,7 +47,7 @@ Any change that weakens a boundary requires explicit security review, a regressi
 
 ### Supported release boundary
 
-Stable and supported versions will be identified in the release notes. Beta and release-candidate versions may contain defects and are not security certifications. Users should update to the latest supported patch release and rotate credentials if they believe sensitive material was exposed.
+The current supported stable release is `1.0.0`, published in the [GitHub release notes](https://github.com/KittodGG/RepoSentinel/releases/tag/v1.0.0). A readiness result is not a security certification. Users should update to the latest supported patch release and rotate credentials if they believe sensitive material was exposed.
 
 ## Bahasa Indonesia
 
@@ -96,7 +96,7 @@ Perubahan yang melemahkan boundary apa pun wajib memiliki security review ekspli
 
 ### Batas release yang didukung
 
-Stable dan supported version akan ditetapkan dalam release notes. Version beta dan release candidate dapat mengandung defect dan bukan security certification. Pengguna sebaiknya memperbarui ke patch release supported terbaru dan melakukan credential rotation jika menduga ada material sensitif yang terekspos.
+Supported stable version saat ini adalah `1.0.0`, yang dipublikasikan pada [GitHub release notes](https://github.com/KittodGG/RepoSentinel/releases/tag/v1.0.0). Hasil readiness bukan security certification. Pengguna sebaiknya memperbarui ke patch release supported terbaru dan melakukan credential rotation jika menduga ada material sensitif yang terekspos.
 
 ### Triage classification / Klasifikasi triage
 

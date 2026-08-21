@@ -16,8 +16,12 @@ concurrency:
 
 jobs:
   quality:
-    name: Typecheck, test, build, and smoke scan
-    runs-on: ubuntu-latest
+    name: Typecheck, test, build, and smoke scan (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -51,13 +55,15 @@ jobs:
         run: pnpm build
 
       - name: Smoke scan repository
-        run: node packages/cli/dist/index.js check . --profile public --lang en --format json --no-color > /tmp/reposentinel-quality-report.json
+        run: node packages/cli/dist/index.js check . --profile public --lang en --format json --no-color --output "${{ runner.temp }}/reposentinel-quality-report.json"
 
       - name: Validate smoke report
+        env:
+          REPORT_PATH: ${{ runner.temp }}/reposentinel-quality-report.json
         run: |
-          node --input-type=module <<'NODE'
+          node --input-type=module -e '
           import { readFile } from "node:fs/promises";
-          const report = JSON.parse(await readFile("/tmp/reposentinel-quality-report.json", "utf8"));
+          const report = JSON.parse(await readFile(process.env.REPORT_PATH, "utf8"));
           if (report.schemaVersion !== "reposentinel.report/v1") throw new Error("Unexpected report schema");
           if (report.locale !== "en") throw new Error("Unexpected report locale");
-          NODE
+          '

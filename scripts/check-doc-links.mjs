@@ -1,7 +1,8 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = resolve(new URL("..", import.meta.url).pathname);
+const root = fileURLToPath(new URL("..", import.meta.url));
 const extensions = new Set([".md", ".yml", ".yaml"]);
 const ignoredDirectories = new Set([".git", "node_modules", "dist", "artifacts"]);
 const missing = [];

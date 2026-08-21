@@ -3,7 +3,7 @@ import { lstat, open, readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import ignore from "ignore";
-import type { GitMetadata, RepositoryContext, RepositoryFile, RepositoryProfile, ResolvedConfig } from "./index.js";
+import type { GitMetadata, RepositoryContext, RepositoryFile, RepositoryProfile, ResolvedConfig, ScanBudget } from "./index.js";
 
 export type DiscoveryOptions = {
   maxFileBytes?: number;
@@ -14,8 +14,10 @@ export type DiscoveryOptions = {
 export type DiscoveryResult = {
   files: RepositoryFile[];
   textCache: Map<string, string>;
+  securityTextCache: Map<string, string>;
   ignoredCount: number;
   git: GitMetadata;
+  scanBudget: ScanBudget;
 };
 
 export type ChangedFilesResult = {
@@ -87,64 +89,88 @@ async function isBinary(path: string, maxBytes: number): Promise<boolean> {
   }
 }
 
+function ignoredBy(matcher: ReturnType<typeof ignore>, relativePath: string, isDirectory: boolean): boolean {
+  const ignorePath = isDirectory ? `${relativePath}/` : relativePath;
+  return relativePath.length > 0 && (matcher.ignores(ignorePath) || (isDirectory && matcher.ignores(`${relativePath}/placeholder`)));
+}
+
 export async function discoverRepository(root: string, config: ResolvedConfig, options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
   const resolvedRoot = resolve(root);
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
   const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
-  const matcher = ignore().add(config.ignore);
+  const configuredMatcher = ignore().add(config.ignore);
+  const repositoryMatcher = ignore();
   try {
-    matcher.add(await readFile(join(resolvedRoot, ".gitignore"), "utf8"));
+    repositoryMatcher.add(await readFile(join(resolvedRoot, ".gitignore"), "utf8"));
   } catch {
     // A repository without .gitignore is valid; configured patterns still apply.
   }
   const [trackedPaths, git] = await Promise.all([readTrackedPaths(resolvedRoot), readGitMetadata(resolvedRoot)]);
   const files: RepositoryFile[] = [];
   const textCache = new Map<string, string>();
+  const securityTextCache = new Map<string, string>();
   let ignoredCount = 0;
-  let totalBytes = 0;
+  let filesConsidered = 0;
+  let textBytesCached = 0;
+  let truncated = false;
 
   async function visit(directory: string): Promise<void> {
+    if (truncated) return;
     const entries = await readdir(directory, { withFileTypes: true });
     for (const entry of entries) {
+      if (truncated) return;
       const absolutePath = join(directory, entry.name);
       const relativePath = toPosix(relative(resolvedRoot, absolutePath));
-      const ignorePath = entry.isDirectory() ? `${relativePath}/` : relativePath;
-      const ignored = relativePath.length > 0 && (matcher.ignores(ignorePath) || (entry.isDirectory() && matcher.ignores(`${relativePath}/placeholder`)));
-      if (ignored) {
+      const configuredIgnored = ignoredBy(configuredMatcher, relativePath, entry.isDirectory());
+      if (configuredIgnored) {
         ignoredCount += 1;
         continue;
       }
+      const repositoryIgnored = ignoredBy(repositoryMatcher, relativePath, entry.isDirectory());
+      if (repositoryIgnored) ignoredCount += 1;
 
       const metadata = await lstat(absolutePath);
-      if (entry.isSymbolicLink()) {
-        if (files.length >= maxFiles) throw new Error(`Repository exceeds the scan file limit of ${maxFiles}. Use ignore patterns or a smaller target.`);
-        totalBytes += metadata.size;
-        if (totalBytes > maxTotalBytes) throw new Error(`Repository exceeds the aggregate scan size limit of ${maxTotalBytes} bytes. Use ignore patterns or a smaller target.`);
-        files.push({ relativePath, absolutePath, kind: "symlink", sizeBytes: metadata.size, isIgnored: false, isTracked: trackedPaths.has(relativePath) });
+      if (entry.isDirectory()) {
+        // Configured ignores are pruned for performance. Repository .gitignore
+        // paths are still traversed so security detectors can inspect local-only
+        // .env, key, and credential files without exposing their text to other rules.
+        await visit(absolutePath);
         continue;
       }
-      if (entry.isDirectory()) {
-        await visit(absolutePath);
+
+      if (filesConsidered >= maxFiles) {
+        truncated = true;
+        return;
+      }
+      filesConsidered += 1;
+
+      if (entry.isSymbolicLink()) {
+        files.push({ relativePath, absolutePath, kind: "symlink", sizeBytes: metadata.size, isIgnored: repositoryIgnored, isTracked: trackedPaths.has(relativePath) });
         continue;
       }
       if (!entry.isFile()) continue;
 
-      if (files.length >= maxFiles) throw new Error(`Repository exceeds the scan file limit of ${maxFiles}. Use ignore patterns or a smaller target.`);
-      totalBytes += metadata.size;
-      if (totalBytes > maxTotalBytes) throw new Error(`Repository exceeds the aggregate scan size limit of ${maxTotalBytes} bytes. Use ignore patterns or a smaller target.`);
       const binary = metadata.size > maxFileBytes || await isBinary(absolutePath, maxFileBytes);
       const kind = binary ? "binary" : "text";
-      files.push({ relativePath, absolutePath, kind, sizeBytes: metadata.size, isIgnored: false, isTracked: trackedPaths.has(relativePath) });
-      if (kind === "text" && metadata.size <= maxFileBytes) {
-        textCache.set(relativePath, await readFile(absolutePath, "utf8"));
+      files.push({ relativePath, absolutePath, kind, sizeBytes: metadata.size, isIgnored: repositoryIgnored, isTracked: trackedPaths.has(relativePath) });
+      if (kind !== "text" || metadata.size > maxFileBytes) continue;
+      if (textBytesCached + metadata.size > maxTotalBytes) {
+        truncated = true;
+        return;
       }
+
+      const source = await readFile(absolutePath, "utf8");
+      textBytesCached += metadata.size;
+      if (repositoryIgnored) securityTextCache.set(relativePath, source);
+      else textCache.set(relativePath, source);
     }
   }
 
   await visit(resolvedRoot);
   files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
-  return { files, textCache, ignoredCount, git };
+  const scanBudget: ScanBudget = { maxFiles, maxTotalBytes, filesConsidered, textBytesCached, truncated };
+  return { files, textCache, securityTextCache, ignoredCount, git, scanBudget };
 }
 
 export async function createRepositoryContext(
@@ -154,5 +180,15 @@ export async function createRepositoryContext(
   options?: DiscoveryOptions
 ): Promise<RepositoryContext & { ignoredCount: number }> {
   const result = await discoverRepository(root, config, options);
-  return { root: resolve(root), profile, config, files: result.files, textCache: result.textCache, ignoredCount: result.ignoredCount, git: result.git };
+  return {
+    root: resolve(root),
+    profile,
+    config,
+    files: result.files,
+    textCache: result.textCache,
+    securityTextCache: result.securityTextCache,
+    scanBudget: result.scanBudget,
+    ignoredCount: result.ignoredCount,
+    git: result.git
+  };
 }

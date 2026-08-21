@@ -13,11 +13,11 @@
 
 </div>
 
-> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag; earlier prerelease versions remain historical release records only. The repository remains private until the maintainer separately approves public visibility.
+> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag; earlier prerelease versions remain historical release records only. The repository is public after the maintainer’s explicit visibility approval; the stable npm and GitHub release remain available for all users.
 
 ## Contribution & governance
 
-The repository is currently private by maintainer choice after the stable 1.0.0 release. The contribution process is already visible and documented from this page; repository visibility will change only after an explicit maintainer approval.
+The repository is public following the stable 1.0.0 release. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution.
 
 | English | Bahasa Indonesia |
 |---|---|
@@ -233,7 +233,9 @@ flowchart LR
 
 ### Safety boundaries
 
-RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure.
+RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure. The built-in credential detector intentionally covers only documented high-confidence GitHub, Slack, and AWS prefixes; it does not claim coverage for every Google, Stripe, OpenAI, Azure, JWT, or high-entropy secret format.
+
+Configured ignore patterns prune files from the general scan. Repository `.gitignore` files remain visible as metadata, and local files matched only by repository `.gitignore` are isolated for security detectors so `.env`, key, and credential exposure can still be reported without sending their content to other rules.
 
 During a local scan, RepoSentinel should not send source code to a server, call the network by default, execute `npm install`, execute package scripts, run build hooks, follow symlinks outside the target root, or print secret values. Security findings must show safe path/line context and redacted evidence only.
 
@@ -252,6 +254,7 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 | [GitHub Governance](docs/GITHUB_GOVERNANCE.md) | CODEOWNERS, branch-protection policy, and private-to-public visibility gate. |
 | [License Policy](docs/LICENSE_POLICY.md) | MIT status, Apache-2.0 comparison, and migration checklist. |
 | [Stable Release Readiness](docs/RELEASE_READINESS.md) | Stable quality, security, compatibility, pilot, packaging, and rollback gates. |
+| [Rule Catalog](docs/RULES.md) | Per-rule severity, purpose, limitations, remediation, and documentation anchors. |
 | [Pilot Validation](docs/PILOT_VALIDATION.md) | External validation protocol, cohort matrix, metrics, and stop conditions. |
 | [Pilot Validation Results](docs/PILOT_VALIDATION_RESULTS.md) | Measured internal and public-repository pilot results with safety boundaries. |
 
@@ -333,11 +336,11 @@ dogfooding + external pilot
 stable production
 ```
 
-Lihat [roadmap lengkap](docs/ROADMAP_PRODUCTION.md) untuk pekerjaan satu per satu, definition of done, risk control, release gate, dan urutan issue.
+Lihat [roadmap lengkap](docs/ROADMAP_PRODUCTION.md) untuk pekerjaan satu per satu, definition of done, risk control, release gate, dan urutan issue. Detail setiap detector tersedia di [RULES.md](docs/RULES.md).
 
 ### Visual terminal dan demo
 
-Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, border panel cyan, metadata slate, warning kuning, error merah, dan info cyan. Pada terminal interaktif warna dipertahankan; gunakan `--no-color` untuk CI, pipe, SSH fallback, atau output machine.
+Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, border panel cyan, metadata slate, warning kuning, error merah, dan info cyan. Pada terminal interaktif warna dipertahankan; `--no-color`, `NO_COLOR`, output non-TTY, dan report ke file selalu bebas ANSI untuk CI, pipe, SSH fallback, atau output machine.
 
 ![Tampilan ready-state Sentinel Console RepoSentinel](docs/assets/reposentinel-terminal-ready.png)
 
@@ -347,7 +350,7 @@ Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, bor
 
 ### Status saat ini
 
-Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository tetap private sampai approval terpisah untuk visibility public.
+Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository sudah public setelah approval eksplisit maintainer untuk visibility public; stable npm dan GitHub release tersedia untuk semua pengguna.
 
 ---
 
