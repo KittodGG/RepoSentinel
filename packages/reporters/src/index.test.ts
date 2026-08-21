@@ -265,4 +265,52 @@ describe("reporters", () => {
       }),
     ).toMatchSnapshot();
   });
+
+  it("surfaces truncation in every report format", () => {
+    const base = {
+      locale: "en" as const,
+      repository: "fixture",
+      profile: "public" as const,
+      findings: [warning],
+      threshold: "error" as const,
+      findingsTruncated: true,
+    };
+
+    const json = JSON.parse(renderJsonReport(base)) as {
+      scan: { findingsTruncated: boolean };
+    };
+    expect(json.scan.findingsTruncated).toBe(true);
+
+    const sarif = JSON.parse(renderSarifReport(base)) as {
+      runs: { invocations: { properties: { findingsTruncated: boolean } }[] }[];
+    };
+    expect(sarif.runs[0]?.invocations[0]?.properties.findingsTruncated).toBe(
+      true,
+    );
+
+    expect(renderMarkdownReport(base)).toMatch(/truncat/iu);
+    expect(renderHtmlReport(base)).toMatch(/truncat/iu);
+    expect(
+      renderTerminalReport({
+        ...base,
+        filesScanned: 4,
+        ignoredCount: 1,
+        color: false,
+      }),
+    ).toMatch(/truncat/iu);
+  });
+
+  it("reports a complete inventory when nothing was truncated", () => {
+    const base = {
+      locale: "en" as const,
+      repository: "fixture",
+      profile: "public" as const,
+      findings: [warning],
+      threshold: "error" as const,
+    };
+    const json = JSON.parse(renderJsonReport(base)) as {
+      scan: { findingsTruncated: boolean };
+    };
+    expect(json.scan.findingsTruncated).toBe(false);
+  });
 });

@@ -42,6 +42,7 @@ export type MessageKey =
   | "status.almostReady"
   | "status.needsAttention"
   | "status.notReady"
+  | "status.notApplicable"
   | "result.passed"
   | "result.passedWithWarnings"
   | "result.failed"
@@ -49,6 +50,8 @@ export type MessageKey =
   | "finding.error"
   | "finding.critical"
   | "finding.info"
+  | "finding.evidenceLabel"
+  | "finding.fixLabel"
   | "error.invalidLocale"
   | "error.invalidPath";
 
@@ -101,6 +104,7 @@ const catalogs: Record<Locale, Catalog> = {
     "status.almostReady": "almost ready",
     "status.needsAttention": "needs attention",
     "status.notReady": "not ready",
+    "status.notApplicable": "not applicable",
     "result.passed": "passed",
     "result.passedWithWarnings": "passed with warnings",
     "result.failed": "failed",
@@ -108,6 +112,8 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.error": "error",
     "finding.critical": "critical",
     "finding.info": "info",
+    "finding.evidenceLabel": "Evidence",
+    "finding.fixLabel": "Fix",
     "error.invalidLocale": ({ locale }) =>
       `Unsupported locale "${locale}". Use: en, id.`,
     "error.invalidPath": ({ path }) => `Target path does not exist: ${path}`,
@@ -154,6 +160,7 @@ const catalogs: Record<Locale, Catalog> = {
     "status.almostReady": "hampir siap",
     "status.needsAttention": "perlu perhatian",
     "status.notReady": "belum siap",
+    "status.notApplicable": "tidak dapat dinilai",
     "result.passed": "lulus",
     "result.passedWithWarnings": "lulus dengan warning",
     "result.failed": "gagal",
@@ -161,6 +168,8 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.error": "error",
     "finding.critical": "critical",
     "finding.info": "info",
+    "finding.evidenceLabel": "Bukti",
+    "finding.fixLabel": "Perbaikan",
     "error.invalidLocale": ({ locale }) =>
       `Locale "${locale}" tidak didukung. Gunakan: en, id.`,
     "error.invalidPath": ({ path }) => `Path target tidak ditemukan: ${path}`,
@@ -209,3 +218,5 @@ export function createTranslator(locale: Locale) {
 export function getCatalog(locale: Locale): Readonly<Catalog> {
   return catalogs[locale];
 }
+
+export { ruleTextCatalog, translateRuleText } from "./rule-text.js";

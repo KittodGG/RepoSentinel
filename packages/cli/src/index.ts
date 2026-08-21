@@ -306,63 +306,34 @@ async function runCheck(
           changedFiles: scan.changedFiles ?? [],
         }
       : {};
+    // One shared option object for every reporter. Building each call site
+    // separately previously let `findingsTruncated` reach only the Markdown
+    // reporter, so JSON and SARIF reported a complete inventory after the
+    // output budget had dropped findings.
+    const reportOptions = {
+      locale,
+      repository: basename(scan.root),
+      profile,
+      findings: scan.findings,
+      findingsTruncated: scan.findingsTruncated,
+      threshold,
+      network: scan.context.config.security.network,
+      scanBudget: scan.context.scanBudget,
+      ...changedOptions,
+    };
     const renderReport = (format: OutputFormat): string =>
       format === "json"
-        ? renderJsonReportExternal({
-            locale,
-            repository: basename(scan.root),
-            profile,
-            findings: scan.findings,
-            threshold,
-            network: scan.context.config.security.network,
-            scanBudget: scan.context.scanBudget,
-            ...changedOptions,
-          })
+        ? renderJsonReportExternal(reportOptions)
         : format === "markdown"
-          ? renderMarkdownReportExternal({
-              locale,
-              repository: basename(scan.root),
-              profile,
-              findings: scan.findings,
-              findingsTruncated: scan.findingsTruncated,
-              threshold,
-              network: scan.context.config.security.network,
-              scanBudget: scan.context.scanBudget,
-              ...changedOptions,
-            })
+          ? renderMarkdownReportExternal(reportOptions)
           : format === "sarif"
-            ? renderSarifReportExternal({
-                locale,
-                repository: basename(scan.root),
-                profile,
-                findings: scan.findings,
-                threshold,
-                network: scan.context.config.security.network,
-                scanBudget: scan.context.scanBudget,
-                ...changedOptions,
-              })
+            ? renderSarifReportExternal(reportOptions)
             : format === "html"
-              ? renderHtmlReportExternal({
-                  locale,
-                  repository: basename(scan.root),
-                  profile,
-                  findings: scan.findings,
-                  threshold,
-                  network: scan.context.config.security.network,
-                  scanBudget: scan.context.scanBudget,
-                  ...changedOptions,
-                })
+              ? renderHtmlReportExternal(reportOptions)
               : renderTerminalReportExternal({
-                  locale,
-                  repository: basename(scan.root),
-                  profile,
+                  ...reportOptions,
                   filesScanned: scan.context.files.length,
                   ignoredCount: scan.context.ignoredCount,
-                  findings: scan.findings,
-                  threshold,
-                  ...changedOptions,
-                  network: scan.context.config.security.network,
-                  scanBudget: scan.context.scanBudget,
                   color: resolveColor(options.color, Boolean(options.output)),
                 });
     if (options.output) {

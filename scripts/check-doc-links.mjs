@@ -9,6 +9,10 @@ const ignoredDirectories = new Set([
   "node_modules",
   "dist",
   "artifacts",
+  // Corpus checkouts are other projects' repositories cloned under .cache; their
+  // documentation is not ours to validate.
+  ".cache",
+  "coverage",
 ]);
 const missing = [];
 

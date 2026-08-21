@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
-import type {
-  RepositoryContext,
-  RepositoryFile,
-  ResolvedConfig,
+import {
+  type RepositoryContext,
+  type RepositoryFile,
+  type ResolvedConfig,
+  summarizeFindings,
 } from "@reposentinel/core";
 import { describe, expect, it } from "vitest";
 import { enabledRules, rules, runRules, safeAutofixes } from "./index.js";
@@ -62,13 +63,21 @@ describe("rules", () => {
   });
 
   it("reports missing README and .gitignore", () => {
-    const result = runRules(context("public", [], {}));
+    const result = runRules(context("public", [file("src/index.ts")], {}));
     expect(result.map((finding) => finding.ruleId)).toContain(
       "documentation.readme-exists",
     );
     expect(result.map((finding) => finding.ruleId)).toContain(
       "gitignore.exists",
     );
+  });
+
+  it("does not score a target that holds no scannable files", () => {
+    const result = runRules(context("public", [], {}));
+    expect(result.map((finding) => finding.ruleId)).toEqual([
+      "scan.empty-target",
+    ]);
+    expect(summarizeFindings(result, "error").status).toBe("not-applicable");
   });
 
   it("accepts lowercase canonical filenames for README and license checks", () => {
@@ -615,7 +624,7 @@ describe("rules", () => {
   });
 
   it("offers safe autofixes only for missing template files", () => {
-    const target = context("public", [], {});
+    const target = context("public", [file("src/index.ts")], {});
     const findings = runRules(target);
     const fixes = safeAutofixes(target, findings);
     expect(fixes.map((fix) => fix.path)).toEqual([

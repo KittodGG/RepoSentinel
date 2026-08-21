@@ -6,7 +6,11 @@ import {
   type ScoreStatus,
   summarizeFindings,
 } from "@reposentinel/core";
-import { createTranslator, type Locale } from "@reposentinel/i18n";
+import {
+  createTranslator,
+  type Locale,
+  translateRuleText,
+} from "@reposentinel/i18n";
 import { createColors } from "picocolors";
 
 function statusMessageKey(
@@ -15,7 +19,8 @@ function statusMessageKey(
   | "status.ready"
   | "status.almostReady"
   | "status.needsAttention"
-  | "status.notReady" {
+  | "status.notReady"
+  | "status.notApplicable" {
   switch (status) {
     case "ready":
       return "status.ready";
@@ -25,8 +30,36 @@ function statusMessageKey(
       return "status.needsAttention";
     case "not-ready":
       return "status.notReady";
+    case "not-applicable":
+      return "status.notApplicable";
   }
   throw new Error(`Unknown score status: ${status}`);
+}
+
+/**
+ * A readiness score is only meaningful when there was something to score. An
+ * empty target reports `not-applicable`, so the number is replaced by a dash
+ * rather than printing a misleading zero.
+ */
+function scoreLabel(summary: { score: number; status: ScoreStatus }): string {
+  return summary.status === "not-applicable" ? "n/a" : `${summary.score} / 100`;
+}
+
+/**
+ * Localizes the human-facing text of a finding. Applied by the terminal,
+ * Markdown, and HTML reporters only — JSON and SARIF keep the English source so
+ * machine-readable output stays byte-identical across locales.
+ */
+function localizeFinding(finding: Finding, locale: Locale): Finding {
+  if (locale === "en") return finding;
+  return {
+    ...finding,
+    message: translateRuleText(locale, finding.message),
+    remediation: translateRuleText(locale, finding.remediation),
+    ...(finding.evidence
+      ? { evidence: translateRuleText(locale, finding.evidence) }
+      : {}),
+  };
 }
 
 function colorize(
@@ -134,7 +167,7 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
       : []),
     "",
     colors.blue(boxTop),
-    scoreColor(boxRow(`${summary.score} / 100   ${status.toUpperCase()}`)),
+    scoreColor(boxRow(`${scoreLabel(summary)}   ${status.toUpperCase()}`)),
     colors.dim(
       boxRow(
         `${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`,
@@ -149,7 +182,8 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
   if (findings.length === 0) {
     output.push(colors.green(`✓ ${t("scan.noFindings")}`));
   } else {
-    for (const finding of findings) {
+    for (const raw of findings) {
+      const finding = localizeFinding(raw, locale);
       const marker =
         finding.severity === "critical" || finding.severity === "error"
           ? "×"
@@ -171,14 +205,18 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
       );
       output.push(`   ${finding.message}`);
       if (finding.evidence)
-        output.push(`   ${colors.dim(`Evidence: ${finding.evidence}`)}`);
-      output.push(`   ${colors.dim(`Fix: ${finding.remediation}`)}`);
+        output.push(
+          `   ${colors.dim(`${t("finding.evidenceLabel")}: ${finding.evidence}`)}`,
+        );
+      output.push(
+        `   ${colors.dim(`${t("finding.fixLabel")}: ${finding.remediation}`)}`,
+      );
     }
   }
 
   output.push(
     "",
-    `${t("scan.score")}  : ${summary.score} / 100`,
+    `${t("scan.score")}  : ${scoreLabel(summary)}`,
     `${t("scan.status")} : ${status}`,
     `${t("scan.result")} : ${resultLabel}`,
     `Exit code : ${summary.exitCode}`,
@@ -205,6 +243,7 @@ export function renderMarkdownReport(
     options.findings.length === 0
       ? "No findings."
       : options.findings
+          .map((raw) => localizeFinding(raw, options.locale))
           .map((finding) =>
             [
               `### ${code(finding.ruleId)} — ${finding.severity}`,
@@ -244,7 +283,7 @@ export function renderMarkdownReport(
           `- Changed files: ${code(String(options.changedFiles?.length ?? 0))}`,
         ]
       : []),
-    `- Score: ${code(`${summary.score} / 100`)}`,
+    `- Score: ${code(scoreLabel(summary))}`,
     `- Status: ${code(summary.status)}`,
     "",
     "## Summary",
@@ -284,7 +323,10 @@ export function renderHtmlReport(
   const rows =
     options.findings.length === 0
       ? `<tr><td colspan="4" class="empty">No findings. The repository passed this scan.</td></tr>`
-      : options.findings.map(htmlFindingRow).join("\n");
+      : options.findings
+          .map((raw) => localizeFinding(raw, options.locale))
+          .map(htmlFindingRow)
+          .join("\n");
   const changedScope = options.changedSince
     ? `<div class="scope"><span>Changed-files mode</span><code>${escapeHtml(options.changedSince)}</code><span>${options.changedFiles?.length ?? 0} changed file(s)</span></div>`
     : "";
@@ -303,7 +345,7 @@ export function renderHtmlReport(
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 12% 0%,#102d49 0,#07111f 42%,#11102b 100%);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);padding:32px}main{max-width:1160px;margin:0 auto}.brand{display:flex;align-items:center;gap:12px;color:var(--cyan);font:700 22px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.brand span{color:var(--text)}.sub{color:var(--muted);margin:4px 0 28px}.hero{border:1px solid #245276;background:linear-gradient(135deg,#0b1930,#11102b);border-radius:18px;padding:26px;box-shadow:0 18px 60px #0006}.meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.meta code,.scope code{color:var(--cyan);background:#07111f;border:1px solid #245276;border-radius:6px;padding:3px 7px}.score{display:flex;align-items:end;gap:16px;margin-top:22px}.score strong{font:700 48px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:${summary.score >= 90 ? "var(--green)" : summary.score >= 75 ? "var(--cyan)" : "var(--yellow)"}}.status{font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${summary.status === "ready" ? "var(--green)" : "var(--yellow)"}}.scope{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px;border-left:3px solid var(--violet);padding:8px 12px;background:#11102b;color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}.stat{padding:12px 14px;background:#07111f;border:1px solid #1d3b58;border-radius:10px}.stat b{display:block;font:700 22px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.critical b,.error b{color:var(--red)}.warning b{color:var(--yellow)}.info b{color:var(--cyan)}section{margin-top:24px}h2{font-size:18px;margin:0 0 10px;color:var(--cyan)}.table-wrap{overflow:auto;border:1px solid #245276;border-radius:12px}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;vertical-align:top;padding:13px 14px;border-bottom:1px solid #1d3b58}th{background:#0f2740;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.severity{display:inline-block;border-radius:999px;padding:2px 8px;font:700 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:uppercase}.severity-critical,.severity-error{background:#4b1d2b;color:var(--red)}.severity-warning{background:#463915;color:var(--yellow)}.severity-info{background:#123b4a;color:var(--cyan)}.muted,.fix{color:var(--muted)}.fix{font-size:13px}.empty{text-align:center;color:var(--green);padding:28px}.note{color:var(--muted);font-size:13px;margin-top:18px;border-top:1px solid #1d3b58;padding-top:14px}@media(max-width:700px){body{padding:16px}.stats{grid-template-columns:repeat(2,1fr)}.score strong{font-size:38px}}
 </style>
 </head>
-<body><main><div class="brand">◈ <span>RepoSentinel</span></div><div class="sub">Repository readiness, without the noise.</div><div class="hero"><div class="meta"><span>Repository <code>${escapeHtml(options.repository)}</code></span><span>Profile <code>${escapeHtml(options.profile)}</code></span><span>Locale <code>${escapeHtml(options.locale)}</code></span><span>Threshold <code>${escapeHtml(options.threshold)}</code></span><span>Network <code>${escapeHtml(options.network ? "enabled (opt-in)" : "disabled")}</code></span>${options.scanBudget?.truncated ? `<span>Scan <code>bounded</code></span>` : ""}</div><div class="score"><strong>${summary.score}/100</strong><span class="status">${escapeHtml(summary.status)}</span></div>${changedScope}${truncationNote}<div class="stats"><div class="stat critical"><b>${summary.counts.critical}</b>Critical</div><div class="stat error"><b>${summary.counts.error}</b>Error</div><div class="stat warning"><b>${summary.counts.warning}</b>Warning</div><div class="stat info"><b>${summary.counts.info}</b>Info</div></div></div><section><h2>Findings</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message and remediation</th></tr></thead><tbody>${rows}</tbody></table></div></section><p class="note">This report is generated locally.${options.scanBudget?.truncated ? " The scan was bounded and some files were not read." : ""} A readiness score is not proof of security or a substitute for a formal security audit.</p></main></body></html>\n`;
+<body><main><div class="brand">◈ <span>RepoSentinel</span></div><div class="sub">Repository readiness, without the noise.</div><div class="hero"><div class="meta"><span>Repository <code>${escapeHtml(options.repository)}</code></span><span>Profile <code>${escapeHtml(options.profile)}</code></span><span>Locale <code>${escapeHtml(options.locale)}</code></span><span>Threshold <code>${escapeHtml(options.threshold)}</code></span><span>Network <code>${escapeHtml(options.network ? "enabled (opt-in)" : "disabled")}</code></span>${options.scanBudget?.truncated ? `<span>Scan <code>bounded</code></span>` : ""}</div><div class="score"><strong>${summary.status === "not-applicable" ? "n/a" : `${summary.score}/100`}</strong><span class="status">${escapeHtml(summary.status)}</span></div>${changedScope}${truncationNote}<div class="stats"><div class="stat critical"><b>${summary.counts.critical}</b>Critical</div><div class="stat error"><b>${summary.counts.error}</b>Error</div><div class="stat warning"><b>${summary.counts.warning}</b>Warning</div><div class="stat info"><b>${summary.counts.info}</b>Info</div></div></div><section><h2>Findings</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message and remediation</th></tr></thead><tbody>${rows}</tbody></table></div></section><p class="note">This report is generated locally.${options.scanBudget?.truncated ? " The scan was bounded and some files were not read." : ""} A readiness score is not proof of security or a substitute for a formal security audit.</p></main></body></html>\n`;
 }
 
 export function renderJsonReport(
