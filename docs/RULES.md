@@ -76,7 +76,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 ### `security.private-key`
 
 - **Severity:** critical
-- **Detects:** PEM/OpenSSH-style private-key blocks, including realistic multiline key bodies.
+- **Detects:** PEM/OpenSSH-style private-key blocks and armored `-----BEGIN PGP PRIVATE KEY BLOCK-----` material, including realistic multiline key bodies.
 - **Why it matters:** Private keys can enable unauthorized access and must not be stored in a repository.
 - **Remediation:** Remove the key from the working tree and Git history, rotate related credentials, and verify the ignore policy.
 
@@ -84,9 +84,9 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 ### `security.credential-pattern`
 
 - **Severity:** error
-- **Detects:** High-confidence token prefixes for GitHub (`ghp_`, `github_pat_`), Slack (`xoxb-`, `xoxp-`), AWS (`AKIA`, `ASIA`), Stripe (`sk_live_`, `rk_live_`), Google API (`AIza`), OpenAI (`sk-proj-`, `sk-`), npm (`npm_`), and JWT-like three-segment values beginning with `eyJ`. Short lookalikes below the minimum body length are ignored.
+- **Detects:** High-confidence token prefixes for GitHub (`ghp_`, `github_pat_`), Slack (`xoxb-`, `xoxp-`), AWS (`AKIA`, `ASIA`), Stripe (`sk_live_`, `rk_live_`), Google API (`AIza`), OpenAI (`sk-proj-`, `sk-`), npm (`npm_`), and JWT-like three-segment values beginning with `eyJ`. It also detects Slack webhook URLs and common PostgreSQL, MongoDB, MySQL, MariaDB, and Redis connection-string schemes. Short lookalikes below the minimum body length are ignored and evidence is redacted.
 - **Why it matters:** Recognized credentials should be revoked and rotated immediately.
-- **Remediation:** Revoke and rotate the credential, remove it from the repository, and review Git history. This detector is intentionally not a complete secret scanner; it does not replace dedicated secret-management or enterprise scanning tools.
+- **Remediation:** Revoke and rotate the credential, remove it from the repository, and review Git history. This detector is intentionally not a complete secret scanner; it does not replace dedicated secret-management or enterprise scanning tools and does not cover every provider, webhook, connection-string variant, or high-entropy value.
 
 ## Package hygiene
 
@@ -102,9 +102,9 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 ### `package.manifest-files`
 
 - **Severity:** warning
-- **Detects:** A publishable package whose `files` allowlist does not include `dist`.
-- **Why it matters:** Explicit artifact boundaries reduce accidental source, test, and local-file publication.
-- **Remediation:** Include `dist` in the package files allowlist and review the packed artifact.
+- **Detects:** A publishable package whose public `exports`, `main`, or `bin` entrypoint references `dist` while the `files` allowlist does not include `dist`.
+- **Why it matters:** Explicit artifact boundaries reduce accidental source, test, and local-file publication without imposing a dist layout on direct-publish libraries.
+- **Remediation:** Include `dist` in the package files allowlist, or change the public entrypoint to the actual published build output, then review the packed artifact.
 
 <a id="package.manifest-engines"></a>
 ### `package.manifest-engines`
@@ -118,9 +118,9 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 ### `package.lockfile-sync`
 
 - **Severity:** warning
-- **Detects:** A declared package manager without its lockfile, or a pnpm workspace package missing from lockfile importers.
+- **Detects:** An application or workspace with a declared package manager but no matching lockfile, or a pnpm workspace package missing from lockfile importers. Intentional lockfile-free direct-publish libraries are not flagged solely for lacking a lockfile.
 - **Why it matters:** Frozen CI installs depend on manifests and lockfile importers describing the same workspace.
-- **Remediation:** Regenerate the lockfile with the declared package manager and commit it with the manifest changes.
+- **Remediation:** Regenerate the lockfile with the declared package manager and commit it with the manifest changes when the package is an application or workspace.
 
 <a id="package.lockfile-single"></a>
 ### `package.lockfile-single`
@@ -222,7 +222,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 ### `ci.pull-request-target-safety`
 
 - **Severity:** critical
-- **Detects:** A `pull_request_target` workflow that checks out pull-request code in a privileged context.
+- **Detects:** A `pull_request_target` workflow that checks out pull-request code in a privileged context. Trigger detection normalizes YAML mapping (`on:\n  pull_request_target:`), scalar (`on: pull_request_target`), and sequence (`on: [pull_request_target]`) forms.
 - **Why it matters:** Untrusted pull-request code must not run with the target repository's elevated token or secrets.
 - **Remediation:** Use `pull_request`, or separate trusted metadata handling from untrusted code execution.
 
@@ -250,7 +250,7 @@ Custom rules use IDs such as `custom.policy`, are loaded from a repository-local
 
 ## Detection limits
 
-RepoSentinel is not a full secret scanner, SAST engine, dependency vulnerability scanner, or formal security audit. The built-in credential detector covers only the documented high-confidence prefixes, and a clean result does not prove that a repository contains no secrets or vulnerabilities. Use dedicated security tooling and review procedures for those guarantees.
+RepoSentinel is not a full secret scanner, SAST engine, dependency vulnerability scanner, or formal security audit. The built-in credential detector covers only the documented high-confidence token prefixes, provider schemes, webhook pattern, connection-string schemes, and PEM/PGP private-key signatures; a clean result does not prove that a repository contains no secrets or vulnerabilities. Use dedicated security tooling and review procedures for those guarantees.
 
 ## Language and report stability
 

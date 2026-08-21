@@ -71,6 +71,25 @@ describe("rules", () => {
     );
   });
 
+  it("accepts lowercase canonical filenames for README and license checks", () => {
+    const result = runRules(
+      context("public", [file("readme.md"), file("license")], {
+        "readme.md":
+          "# Demo\n\nA repository readiness scanner for developers.\n\n## Quick Start\n\n```bash\npnpm install\npnpm dev\n```",
+        license: "MIT License",
+      }),
+    );
+    expect(result.map((finding) => finding.ruleId)).not.toContain(
+      "documentation.readme-exists",
+    );
+    expect(result.map((finding) => finding.ruleId)).not.toContain(
+      "documentation.quickstart",
+    );
+    expect(result.map((finding) => finding.ruleId)).not.toContain(
+      "community.license-present",
+    );
+  });
+
   it("accepts a complete README Quick Start", () => {
     const result = runRules(
       context("public", [file("README.md"), file(".gitignore")], {
@@ -156,10 +175,38 @@ describe("rules", () => {
     expect(incomplete.map((finding) => finding.ruleId)).toEqual(
       expect.arrayContaining([
         "package.manifest-exports",
-        "package.manifest-files",
         "package.manifest-engines",
         "package.lockfile-sync",
       ]),
+    );
+
+    const directLibrary = runRules(
+      context("npm-package", [file("package.json")], {
+        "package.json": JSON.stringify({
+          name: "direct-library",
+          main: "./index.js",
+          files: ["index.js"],
+        }),
+      }),
+    );
+    expect(directLibrary.map((finding) => finding.ruleId)).not.toContain(
+      "package.manifest-files",
+    );
+    expect(directLibrary.map((finding) => finding.ruleId)).not.toContain(
+      "package.lockfile-sync",
+    );
+
+    const distLibrary = runRules(
+      context("npm-package", [file("package.json")], {
+        "package.json": JSON.stringify({
+          name: "dist-library",
+          main: "./dist/index.js",
+          files: ["index.js"],
+        }),
+      }),
+    );
+    expect(distLibrary.map((finding) => finding.ruleId)).toContain(
+      "package.manifest-files",
     );
   });
 
@@ -182,6 +229,22 @@ describe("rules", () => {
         (finding) => finding.ruleId === "ci.pull-request-target-safety",
       )?.severity,
     ).toBe("critical");
+  });
+
+  it.each([
+    "on: pull_request_target",
+    "on: [pull_request_target]",
+    "on:\n  pull_request_target:",
+  ])("detects pull_request_target trigger form: %s", (trigger) => {
+    const source = `name: Unsafe\n${trigger}\npermissions: read-all\njobs:\n  build:\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n        with:\n          ref: \${{ github.event.pull_request.head.sha }}`;
+    const findings = runRules(
+      context("public", [file(".github/workflows/unsafe.yml")], {
+        ".github/workflows/unsafe.yml": source,
+      }),
+    );
+    expect(findings.map((finding) => finding.ruleId)).toContain(
+      "ci.pull-request-target-safety",
+    );
   });
 
   it("accepts a complete pinned workflow security configuration", () => {
@@ -341,6 +404,52 @@ describe("rules", () => {
     );
     expect(JSON.stringify(result)).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaa");
     expect(JSON.stringify(result)).not.toContain("mmmmmmmmmmmm");
+  });
+
+  it("detects extended secret families and ignores short lookalikes", () => {
+    const slackWebhook = [
+      "https://",
+      "hooks.slack.com/services/",
+      "T12345678/B12345678/abcdefghijklmnop",
+    ].join("");
+    const postgresConnection = [
+      "postgres://",
+      "user:password@db.example.com:5432/application",
+    ].join("");
+    const mongoConnection = [
+      "mongodb+srv://",
+      "user:password@cluster.example.com/application",
+    ].join("");
+    const pgpKey =
+      "-----BEGIN PGP PRIVATE KEY BLOCK-----\n" +
+      "A".repeat(40) +
+      "\n-----END PGP PRIVATE KEY BLOCK-----";
+    const result = runRules(
+      context(
+        "public",
+        [file("config/secrets.txt"), file("keys/private.asc")],
+        {
+          "config/secrets.txt": [
+            slackWebhook,
+            postgresConnection,
+            mongoConnection,
+            ["hooks.slack.com/services/T1/B2/", "short"].join(""),
+            ["postgres://", "short"].join(""),
+          ].join("\n"),
+          "keys/private.asc": pgpKey,
+        },
+      ),
+    );
+    expect(
+      result.filter(
+        (finding) => finding.ruleId === "security.credential-pattern",
+      ),
+    ).toHaveLength(3);
+    expect(
+      result.filter((finding) => finding.ruleId === "security.private-key"),
+    ).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toContain("password@db.example.com");
+    expect(JSON.stringify(result)).not.toContain("BEGIN PGP PRIVATE KEY BLOCK");
   });
 
   it("detects secrets from repository-gitignored security text", () => {

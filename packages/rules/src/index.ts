@@ -7,6 +7,7 @@ import {
   type RuleCategory,
   type Severity,
 } from "@reposentinel/core";
+import { parse } from "yaml";
 
 export type RuleDefinition = {
   id: string;
@@ -44,13 +45,67 @@ function finding(
   };
 }
 
+const canonicalPaths = new Set([
+  "readme.md",
+  "license",
+  "license.md",
+  "license.txt",
+  ".gitignore",
+  "contributing.md",
+  "code_of_conduct.md",
+  "security.md",
+  "package.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "package-lock.json",
+]);
+
+function matchesCanonicalPath(actual: string, expected: string): boolean {
+  if (actual === expected) return true;
+  return (
+    canonicalPaths.has(expected.toLowerCase()) &&
+    actual.toLowerCase() === expected.toLowerCase()
+  );
+}
+
 function fileExists(context: RepositoryContext, path: string): boolean {
   return context.files.some(
     (file) =>
-      file.relativePath === path &&
+      matchesCanonicalPath(file.relativePath, path) &&
       file.kind !== "directory" &&
       !file.isIgnored,
   );
+}
+
+function textForCanonicalPath(
+  context: RepositoryContext,
+  path: string,
+): string | undefined {
+  const exact = context.textCache.get(path);
+  if (exact !== undefined) return exact;
+  const file = context.files.find(
+    (candidate) =>
+      matchesCanonicalPath(candidate.relativePath, path) &&
+      !candidate.isIgnored &&
+      context.textCache.has(candidate.relativePath),
+  );
+  return file ? context.textCache.get(file.relativePath) : undefined;
+}
+
+function hasPullRequestTargetTrigger(source: string): boolean {
+  try {
+    const document = parse(source) as JsonRecord | null;
+    const trigger = document?.on ?? document?.true;
+    if (trigger === "pull_request_target") return true;
+    if (Array.isArray(trigger)) return trigger.includes("pull_request_target");
+    return (
+      typeof trigger === "object" &&
+      trigger !== null &&
+      Object.hasOwn(trigger, "pull_request_target")
+    );
+  } catch {
+    return false;
+  }
 }
 
 function securityText(context: RepositoryContext): ReadonlyMap<string, string> {
@@ -127,6 +182,30 @@ type PackageManifestEntry = {
   data: JsonRecord | undefined;
 };
 
+function containsDistReference(value: unknown): boolean {
+  if (typeof value === "string") {
+    const normalized = value.replace(/^\.\//u, "");
+    return normalized === "dist" || normalized.startsWith("dist/");
+  }
+  if (Array.isArray(value)) return value.some(containsDistReference);
+  if (typeof value === "object" && value !== null)
+    return Object.values(value).some(containsDistReference);
+  return false;
+}
+
+function packageHasApplicationSignals(data: JsonRecord): boolean {
+  if (typeof data.packageManager === "string") return true;
+  if (data.workspaces !== undefined) return true;
+  const scripts = data.scripts;
+  return (
+    typeof scripts === "object" &&
+    scripts !== null &&
+    Object.keys(scripts).some((name) =>
+      ["build", "dev", "start", "serve"].includes(name),
+    )
+  );
+}
+
 function packageManifestEntries(
   context: RepositoryContext,
 ): PackageManifestEntry[] {
@@ -134,7 +213,7 @@ function packageManifestEntries(
     .filter(
       (file) =>
         !file.isIgnored &&
-        file.relativePath.endsWith("package.json") &&
+        file.relativePath.toLowerCase().endsWith("package.json") &&
         context.textCache.has(file.relativePath),
     )
     .map((file) => {
@@ -206,7 +285,7 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
       const path = "README.md";
-      const source = context.textCache.get(path) ?? "";
+      const source = textForCanonicalPath(context, path) ?? "";
       const hasHeading =
         /(^|\n)#+\s*(quick\s*start|getting\s*started|installation|setup)\b/iu.test(
           source,
@@ -236,7 +315,7 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "info",
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
-      const source = context.textCache.get("README.md") ?? "";
+      const source = textForCanonicalPath(context, "README.md") ?? "";
       const lines = source
         .split(/\r?\n/u)
         .map((line) => line.trim())
@@ -319,7 +398,7 @@ export const rules: readonly RuleDefinition[] = [
       const findings: Finding[] = [];
       for (const [path, source] of securityText(context).entries()) {
         const privateKeyPattern =
-          /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----\s*(?:[A-Za-z0-9+/=]{20,}\s*)+-----END [A-Z0-9 ]*PRIVATE KEY-----/gu;
+          /-----BEGIN (?:[A-Z0-9 ]*PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----\s*(?:[A-Za-z0-9+/=]{20,}\s*)+-----END (?:[A-Z0-9 ]*PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----/gu;
         for (const match of source.matchAll(privateKeyPattern)) {
           const matchIndex = match.index ?? 0;
           const line = source.slice(0, matchIndex).split(/\r?\n/u).length;
@@ -351,6 +430,18 @@ export const rules: readonly RuleDefinition[] = [
         /\b(?:github_pat_|sk-proj-|sk_live_|rk_live_|ghp_|xoxb-|xoxp-|AIza|AKIA|ASIA|npm_|sk-)[A-Za-z0-9_-]{16,}/gu;
       const jwtPattern =
         /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/gu;
+      const extendedCredentialPatterns = [
+        {
+          pattern:
+            /\bhooks\.slack\.com\/services\/T[A-Z0-9]{6,}\/B[A-Z0-9]{6,}\/[A-Za-z0-9_-]{16,}/giu,
+          prefix: "hooks.slack.com/services/",
+        },
+        {
+          pattern:
+            /\b(?:postgres|postgresql|mongodb(?:\+srv)?|mysql|mariadb|redis):\/\/[^\s"'`<>]{8,200}/giu,
+          prefix: "connection-string://",
+        },
+      ] as const;
       const prefixes = [
         "github_pat_",
         "sk-proj-",
@@ -365,6 +456,14 @@ export const rules: readonly RuleDefinition[] = [
         "npm_",
         "sk-",
         "eyJ",
+        "hooks.slack.com/services/",
+        "postgres://",
+        "postgresql://",
+        "mongodb://",
+        "mongodb+srv://",
+        "mysql://",
+        "mariadb://",
+        "redis://",
       ] as const;
       for (const [path, source] of securityText(context).entries()) {
         for (const [lineIndex, sourceLine] of source
@@ -373,10 +472,19 @@ export const rules: readonly RuleDefinition[] = [
           const matches = [
             ...sourceLine.matchAll(credentialPattern),
             ...sourceLine.matchAll(jwtPattern),
+            ...extendedCredentialPatterns.flatMap(({ pattern }) =>
+              [...sourceLine.matchAll(pattern)].map((match) => ({
+                ...match,
+                extendedPrefix: extendedCredentialPatterns.find(
+                  (item) => item.pattern.source === pattern.source,
+                )?.prefix,
+              })),
+            ),
           ].sort((left, right) => (left.index ?? 0) - (right.index ?? 0));
           for (const match of matches) {
             const value = match[0] ?? "credential";
             const prefix =
+              ("extendedPrefix" in match ? match.extendedPrefix : undefined) ??
               prefixes.find((candidate) => value.startsWith(candidate)) ??
               "credential";
             findings.push(
@@ -440,16 +548,21 @@ export const rules: readonly RuleDefinition[] = [
               typeof item === "string" &&
               (item === "dist" || item.startsWith("dist/")),
           );
-        return includesDist
+        const expectsDist =
+          containsDistReference(entry.data.exports) ||
+          containsDistReference(entry.data.main) ||
+          containsDistReference(entry.data.bin);
+        return !expectsDist || includesDist
           ? []
           : [
               finding(this, context, {
                 path: entry.path,
                 message:
                   "Publishable package.json does not allowlist its dist output.",
-                evidence: "files must include dist",
+                evidence:
+                  "a public entrypoint references dist but files does not include dist",
                 remediation:
-                  "Add dist to the package files allowlist and keep source-only or local files out of the artifact.",
+                  "Add dist to the package files allowlist or change the public entrypoint to the actual published build output.",
               }),
             ];
       });
@@ -462,8 +575,8 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["public", "npm-package"],
     run(context) {
-      const root = packageManifestEntries(context).find(
-        (entry) => entry.path === "package.json",
+      const root = packageManifestEntries(context).find((entry) =>
+        matchesCanonicalPath(entry.path, "package.json"),
       );
       const rootNode =
         typeof root?.data?.engines === "object" && root.data.engines !== null
@@ -498,18 +611,21 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["public", "npm-package"],
     run(context) {
-      const root = packageManifestEntries(context).find(
-        (entry) => entry.path === "package.json",
+      const entries = packageManifestEntries(context);
+      const root = entries.find((entry) =>
+        matchesCanonicalPath(entry.path, "package.json"),
       );
-      const manager = root?.data?.packageManager;
+      if (!root?.data) return [];
+      const manager = root.data.packageManager;
       const lockfile =
         typeof manager === "string" && manager.startsWith("pnpm@")
           ? "pnpm-lock.yaml"
           : typeof manager === "string" && manager.startsWith("yarn@")
             ? "yarn.lock"
             : "package-lock.json";
-      const lockSource = context.textCache.get(lockfile);
+      const lockSource = textForCanonicalPath(context, lockfile);
       if (!lockSource) {
+        if (!packageHasApplicationSignals(root.data)) return [];
         return [
           finding(this, context, {
             path: lockfile,
@@ -521,7 +637,7 @@ export const rules: readonly RuleDefinition[] = [
       }
       if (lockfile !== "pnpm-lock.yaml") return [];
       const findings: Finding[] = [];
-      for (const entry of packageManifestEntries(context)) {
+      for (const entry of entries) {
         if (!entry.path.startsWith("packages/")) continue;
         const importer = entry.path.slice(0, -"/package.json".length);
         if (!lockSource.includes(`  ${importer}:`)) {
@@ -757,7 +873,7 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["portfolio"],
     run(context) {
-      const readme = context.textCache.get("README.md") ?? "";
+      const readme = textForCanonicalPath(context, "README.md") ?? "";
       const visible =
         /(^|\n)#+\s*(live\s+demo|demo|preview)\b/iu.test(readme) ||
         /https?:\/\/[^\s)]+/iu.test(readme) ||
@@ -960,7 +1076,7 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "npm-package"],
     run(context) {
       return workflowFiles(context).flatMap(({ path, source }) => {
-        const hasTargetTrigger = /^\s*pull_request_target\s*:/mu.test(source);
+        const hasTargetTrigger = hasPullRequestTargetTrigger(source);
         const checksOutPullRequestCode =
           /uses:\s*actions\/checkout@[^\s]+[\s\S]{0,500}ref:\s*\$\{\{[^}]*pull_request/iu.test(
             source,
