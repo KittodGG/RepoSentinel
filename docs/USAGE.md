@@ -392,7 +392,7 @@ Network disabled secara default. `--network` hanya mengaktifkan bounded HTTP lin
 
 Network is disabled by default. `--network` only enables bounded HTTP link checks with SSRF protection; use it only when remote validation is needed. Source code is not uploaded during a local scan.
 
-Credential evidence, private key material, dan sensitive filenames harus ditampilkan dalam bentuk redacted. RepoSentinel bukan full secret scanner, SAST engine, dependency vulnerability scanner, atau formal security audit. Gunakan dedicated security tooling untuk kebutuhan tersebut.
+Credential evidence, private key material, dan sensitive filenames harus ditampilkan dalam bentuk redacted. Built-in detectors mencakup documented GitHub, Slack token, AWS, Stripe, Google API, OpenAI, npm, JWT-like, Slack webhook, common database connection-string, serta PEM/PGP private-key signatures, tetapi tidak mencakup setiap provider, webhook, connection-string variant, atau high-entropy secret. RepoSentinel bukan full secret scanner, SAST engine, dependency vulnerability scanner, atau formal security audit. Gunakan dedicated security tooling untuk kebutuhan tersebut.
 
 ## 11. Common workflows / Alur kerja umum
 

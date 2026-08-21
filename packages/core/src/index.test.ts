@@ -69,6 +69,27 @@ describe("core contracts", () => {
     expect(
       redactSensitiveValue("-----BEGIN RSA PRIVATE KEY-----\nsecret material"),
     ).toBe("[REDACTED PRIVATE KEY]");
+    expect(
+      redactSensitiveValue(
+        ["-----BEGIN PGP PRIVATE KEY BLOCK-----\n", "secret material"].join(""),
+      ),
+    ).toBe("[REDACTED PRIVATE KEY]");
+    expect(
+      redactSensitiveValue(
+        [
+          "https://",
+          "hooks.slack.com/services/",
+          "T12345678/B12345678/abcdefghijklmnop",
+        ].join(""),
+      ),
+    ).toBe("[REDACTED SLACK WEBHOOK]");
+    expect(
+      redactSensitiveValue(
+        ["postgres://", "user:password@db.example.com:5432/application"].join(
+          "",
+        ),
+      ),
+    ).toBe("[REDACTED CONNECTION STRING]");
     expect(redactSensitiveValue(["ghp_", "1234567890abcdef"].join(""))).toBe(
       "ghp_****[REDACTED]",
     );

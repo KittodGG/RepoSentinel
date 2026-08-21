@@ -191,10 +191,25 @@ export function summarizeFindings(
 
 export function redactSensitiveValue(value: string): string {
   if (value.length === 0) return value;
-  if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/u.test(value)) {
+  if (
+    /-----BEGIN (?:[A-Z ]*PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----/u.test(value)
+  ) {
     return value.replace(
-      /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*/u,
+      /-----BEGIN (?:[A-Z ]*PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----[\s\S]*/u,
       "[REDACTED PRIVATE KEY]",
+    );
+  }
+  const slackWebhookPattern =
+    /\b(?:https?:\/\/)?hooks\.slack\.com\/services\/T[A-Z0-9]{6,}\/B[A-Z0-9]{6,}\/[A-Za-z0-9_-]{16,}/iu;
+  if (slackWebhookPattern.test(value)) {
+    return value.replace(slackWebhookPattern, "[REDACTED SLACK WEBHOOK]");
+  }
+  const connectionStringPattern =
+    /\b(?:postgres|postgresql|mongodb(?:\+srv)?|mysql|mariadb|redis):\/\/[^\s"'`<>]{8,200}/iu;
+  if (connectionStringPattern.test(value)) {
+    return value.replace(
+      connectionStringPattern,
+      "[REDACTED CONNECTION STRING]",
     );
   }
   const credentialPattern =
