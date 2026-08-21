@@ -1,11 +1,27 @@
 # Changelog
 
+All notable changes to RepoSentinel are documented here. Version `1.0.0` is the current stable release; the `Unreleased` section contains verified work prepared after publication.
+
 ## Unreleased — post-1.0.0 hardening
 
-- Fixed repository `.gitignore` handling so ignored files remain metadata-visible and security detectors can inspect isolated text without exposing it to general rules.
-- Fixed multiline private-key detection, expanded IPv6 and IPv4-mapped SSRF blocking, transparent blocked-target reporting, deterministic custom-rule fingerprints, root-absolute Markdown link resolution, and default recommended ignores.
-- Fixed `--no-color` for both argument positions, `NO_COLOR`, non-TTY output, and report files; added scan-budget metadata to reports.
-- Added Windows CI coverage, portable script paths, Dependabot configuration, the public rule catalog, and a sanitized security-hardening summary.
+### Precision and safety
+
+- Added a pinned external-repository corpus gate with reproducible commits, bounded scan time, report-size limits, finding-volume limits, and a blocking-security policy that keeps test fixtures visible without treating them as production credentials.
+- Added connection-string placeholder filtering, plausible-JWT validation, test-certificate severity handling, Markdown code-fence masking, CommonMark angle-bracket destination parsing, root-route link handling, dual-license filename support, and actual-path reporting.
+- Added safe unknown Git-ref errors that do not disclose absolute paths or raw command details.
+- Fixed custom glob semantics so `**/` matches zero or more directories and `?` matches exactly one non-separator character.
+
+### Scoring and reporting
+
+- Added a per-rule score penalty cap so one noisy detector cannot dominate a scan.
+- Added per-rule and total finding-volume caps with explicit `scan.findings-truncated` summary findings.
+- Propagated truncation state through terminal, Markdown, JSON, SARIF, and HTML reports, including the machine-readable JSON schema.
+
+### Documentation and release engineering
+
+- Added the external corpus workflow for scheduled and manual verification; the networked corpus gate remains intentionally separate from the fast local release gate.
+- Added rule limitation notes to the public rule catalog so every detector states what it does not attempt to detect.
+- Documented that rule IDs, severities, fingerprints, configuration keys, and report schemas are stable across locales, while finding prose remains an English-language compatibility surface until the planned message-key localization architecture is implemented.
 
 ## 1.0.0 — 21 August 2026
 
@@ -21,30 +37,21 @@
 - Verified `npm install reposentinel@latest` in a clean temporary prefix and confirmed `reposentinel --version` returns `1.0.0`.
 - Published the GitHub `v1.0.0` release from the verified source commit; the repository is public after explicit maintainer approval.
 
-## 0.1.0-beta.2 — 21 August 2026
+## Pre-1.0.0 foundation
 
-### Fixed
+- Added multilingual CLI UI for English and Bahasa Indonesia.
+- Added local-first repository discovery with ignore patterns, bounded text reads, binary detection, and symlink safety.
+- Added deterministic normalized findings, severity scoring, threshold-based exit codes, and redacted evidence.
+- Added the initial rule pack covering documentation, links, images, badges, security, package hygiene, Git hygiene, community readiness, CI permissions, and portfolio demo visibility.
+- Added terminal, Markdown, and JSON reporters with stable `reposentinel.report/v1` machine output.
+- Added `check`, `report`, `lang`, `init`, `rules`, and `explain` CLI commands.
+- Added the Node.js 24 LTS target, pnpm workspace, strict TypeScript, Vitest tests, reproducible package staging, quality workflow, and reusable GitHub Action.
+- Added dogfooding and hardening scripts for self-scan, JSON schema, invalid input, redaction, and safe failure checks.
 
-- Fixed the bundled CLI direct-invocation guard so the npm-installed `reposentinel` binary executes correctly through npm’s symlinked bin path.
+> RepoSentinel is a repository-readiness assistant. It is not a SAST engine, dependency vulnerability scanner, secret-management platform, or formal security audit. A clean result does not prove that a repository contains no vulnerabilities or sensitive material.
 
-### Released
+## References
 
-- Published `reposentinel@0.1.0-beta.2` to npm with the `beta` dist-tag.
-- Verified a clean registry install and confirmed `reposentinel --version` returns `0.1.0-beta.2`.
-
-## 0.1.0-beta.1 — 20 August 2026
-
-### Added
-
-- Multilingual CLI UI for English and Bahasa Indonesia.
-- Local-first repository discovery with ignore patterns, bounded text reads, binary detection, and symlink safety.
-- Deterministic normalized findings, severity scoring, threshold-based exit codes, and redacted evidence.
-- Initial rule pack covering documentation, links, images, badges, security, package hygiene, Git hygiene, community readiness, CI permissions, and portfolio demo visibility.
-- Terminal, Markdown, and JSON reporters with stable `reposentinel.report/v1` machine output.
-- `check`, `report`, `lang`, `init`, `rules`, and `explain` CLI commands.
-- Node.js 24 LTS target, pnpm workspace, strict TypeScript, Vitest tests, reproducible package staging, quality workflow, and reusable GitHub Action.
-- Dogfooding and hardening scripts for self-scan, JSON schema, invalid input, redaction, and safe failure checks.
-
-### Beta limitations
-
-This beta is a repository-readiness assistant, not a SAST engine, dependency vulnerability scanner, secret-management platform, or formal security audit. The GitHub Action builds from the checked-out repository rather than installing a registry-published version. Third-party Action references are still tag-based and must be pinned to reviewed commit SHAs before a hardened production release.
+- [Repository README](https://github.com/KittodGG/RepoSentinel)
+- [Rule catalog](https://github.com/KittodGG/RepoSentinel/blob/main/docs/RULES.md)
+- [Release readiness guide](https://github.com/KittodGG/RepoSentinel/blob/main/docs/RELEASE_READINESS.md)

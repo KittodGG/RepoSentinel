@@ -65,7 +65,7 @@ The GitHub Action must match local CLI findings for the same commit, use least-p
 
 The package artifact must contain only intended runtime files and dependencies. Verify the tarball manifest, license, bin entrypoint, package metadata, exports, supported Node.js range, and absence of unpublished workspace dependencies. Install the package from the intended registry in an empty temporary directory and run the CLI through npm global, `npx`, and direct binary paths.
 
-Do not overwrite a published version. Stable publication must use a new immutable version, a stable Git tag, a changelog entry, a source commit reference, and a verified `latest` dist-tag. Prerelease history may remain in changelog history, but active stable README, package metadata, default install instructions, and issue templates must not describe the product as beta.
+Do not overwrite a published version. Stable publication must use a new immutable version, a stable Git tag, a changelog entry, a source commit reference, and a verified `latest` dist-tag. Earlier prerelease history may remain in changelog history, but the active README, package metadata, default install instructions, and issue templates must describe only the current stable release.
 
 ### Documentation and governance gate
 

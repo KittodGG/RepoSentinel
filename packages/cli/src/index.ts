@@ -18,6 +18,7 @@ import {
   type ExitThreshold,
   type Finding,
   filterBaselineFindings,
+  limitFindings,
   loadBaseline,
   normalizeFindings,
   type RepositoryProfile,
@@ -191,6 +192,7 @@ type ScanData = {
   threshold: ExitThreshold;
   context: Awaited<ReturnType<typeof createRepositoryContext>>;
   findings: Finding[];
+  findingsTruncated: boolean;
   changedSince?: string;
   changedFiles?: readonly string[];
 };
@@ -254,12 +256,15 @@ async function collectScan(
   const baseline = applyBaseline
     ? await loadBaseline(root, baselinePath)
     : new Set<string>();
+  const baselineFindings = filterBaselineFindings(scopedFindings, baseline);
+  const limited = limitFindings(baselineFindings);
   return {
     root,
     profile,
     threshold,
     context,
-    findings: filterBaselineFindings(scopedFindings, baseline),
+    findings: limited.findings,
+    findingsTruncated: limited.truncated,
     ...(changed
       ? { changedSince: changed.baseRef, changedFiles: changed.paths }
       : {}),
@@ -319,6 +324,7 @@ async function runCheck(
               repository: basename(scan.root),
               profile,
               findings: scan.findings,
+              findingsTruncated: scan.findingsTruncated,
               threshold,
               network: scan.context.config.security.network,
               scanBudget: scan.context.scanBudget,

@@ -14,6 +14,8 @@
     "release:gate": "pnpm typecheck && pnpm test && pnpm build && pnpm pack:release && node scripts/release-gate.mjs",
     "benchmark": "pnpm --filter reposentinel build && node scripts/benchmark.mjs . 5",
     "test:stable-matrix": "node scripts/stable-matrix.mjs",
+    "test:corpus": "pnpm --filter reposentinel build && node scripts/corpus-check.mjs",
+    "release:gate:full": "pnpm release:gate && pnpm test:corpus",
     "dogfood": "pnpm --filter reposentinel build && node scripts/dogfood.mjs",
     "dev": "pnpm --filter reposentinel dev",
     "lint": "pnpm exec biome check packages scripts",

@@ -81,7 +81,9 @@ Action meng-install workspace repository yang di-checkout dengan lockfile, memba
 
 ## CI-safe behavior / Perilaku aman untuk CI
 
-The Action runs with network disabled by RepoSentinel configuration, does not execute the target repository’s package scripts, and uses `--no-color` so logs remain readable in GitHub Actions. JSON and Markdown reports do not contain terminal escape sequences. The Action may fail at the configured severity threshold while preserving lower-severity findings in the report.
+The Action runs with network disabled by RepoSentinel configuration, does not execute the target repository’s package scripts, and uses `--no-color` so logs remain readable in GitHub Actions. JSON and Markdown reports do not contain terminal escape sequences. The Action may fail at the configured severity threshold while preserving lower-severity findings in the report. The weekly corpus workflow is networked and intentionally separate from the fast local release gate; run it with `pnpm test:corpus` when validating a release candidate.
+
+Workflow corpus mingguan menggunakan network dan sengaja dipisahkan dari release gate lokal yang cepat; jalankan `pnpm test:corpus` saat memvalidasi release candidate.
 
 Action berjalan dengan network disabled melalui configuration RepoSentinel, tidak menjalankan package script target repository, dan menggunakan `--no-color` agar log mudah dibaca di GitHub Actions. Report JSON dan Markdown tidak berisi terminal escape sequence. Action dapat gagal pada severity threshold yang dikonfigurasi sambil tetap menyimpan finding severity yang lebih rendah di report.
 
@@ -93,6 +95,7 @@ A production or stable change is not ready to merge until the following conditio
 |---|---|
 | Type safety / Type safety | `pnpm typecheck` passes on the supported Node.js version. / Lulus pada Node.js yang didukung. |
 | Regression suite / Regression suite | `pnpm test` passes, including core, discovery, localization, config, rules, and reporters. / Semua test core, discovery, localization, config, rules, dan reporters lulus. |
+| External corpus / Corpus external | `pnpm test:corpus` passes against pinned commits with no non-fixture blocking security findings, bounded output, and no score regression beyond the manifest tolerance. / Corpus pinned lulus tanpa security blocking non-fixture, output berlebih, atau regresi score di luar toleransi manifest. |
 | Build / Build | `pnpm build` produces the CLI bundle and declarations. / Menghasilkan CLI bundle dan declaration. |
 | Smoke report / Smoke report | JSON emits `reposentinel.report/v1`; SARIF emits version `2.1.0`. / JSON dan SARIF memiliki schema yang benar. |
 | Action syntax / Syntax Action | `action.yml` has valid inputs, composite steps, and no secret-dependent behavior. / Input dan composite step valid tanpa ketergantungan secret. |
@@ -105,9 +108,9 @@ A production or stable change is not ready to merge until the following conditio
 
 ## Supported release policy / Kebijakan release yang didukung
 
-Stable releases must have a Git tag, changelog entry, version-pinned artifact, source commit reference, and registry install verification. Prerelease versions may remain visible in historical changelog entries, but the active README, package metadata, default installation instructions, and public issue templates must not describe the product as beta after stable publication.
+Stable releases must have a Git tag, changelog entry, version-pinned artifact, source commit reference, and registry install verification. Earlier prerelease records may remain in history, but the active README, package metadata, default installation instructions, and public issue templates must describe only the current stable release.
 
-Stable release wajib memiliki Git tag, changelog entry, artifact dengan version yang jelas, source commit reference, dan registry install verification. Version prerelease boleh tetap tercatat dalam changelog historis, tetapi README aktif, package metadata, instruksi instalasi default, dan public issue template tidak boleh lagi menggambarkan produk sebagai beta setelah stable publication.
+Stable release wajib memiliki Git tag, changelog entry, artifact dengan version yang jelas, source commit reference, dan registry install verification. Catatan prerelease lama boleh tetap berada di histori, tetapi README aktif, package metadata, instruksi instalasi default, dan public issue template harus hanya menyebut stable release saat ini.
 
 ## Manual publication workflows / Manual publication workflow
 
