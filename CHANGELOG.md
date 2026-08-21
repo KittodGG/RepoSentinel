@@ -12,7 +12,7 @@
 
 - Published `reposentinel@1.0.0` to npm under the `latest` dist-tag.
 - Verified `npm install reposentinel@latest` in a clean temporary prefix and confirmed `reposentinel --version` returns `1.0.0`.
-- GitHub `v1.0.0` release is being finalized from the verified source commit; repository visibility remains private pending separate approval.
+- Published the GitHub `v1.0.0` release from the verified source commit; repository visibility remains private pending separate approval.
 
 ## 0.1.0-beta.2 — 21 August 2026
 

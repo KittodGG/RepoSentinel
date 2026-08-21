@@ -66,9 +66,9 @@ Workstream B mencakup integrasi `.gitignore` dan resource budget, semantics `ext
 
 ## Release decision / Keputusan release
 
-The current tree has completed Workstream A, Workstream B, pilot validation, and final release review. Stable `reposentinel@1.0.0` is published on npm, the clean registry install smoke test passes, and the remaining GitHub release record is being finalized from the verified source commit. The repository remains private by maintainer choice; public visibility requires a separate explicit approval.
+The current tree has completed Workstream A, Workstream B, pilot validation, and final release review. Stable `reposentinel@1.0.0` is published on npm, the clean registry install smoke test passes, and the GitHub `v1.0.0` release is published from the verified source commit. The repository remains private by maintainer choice; public visibility requires a separate explicit approval.
 
-Current tree telah menyelesaikan Workstream A, Workstream B, pilot validation, dan final release review. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan clean registry install smoke test berhasil; GitHub release record sedang difinalkan dari source commit yang terverifikasi. Repository tetap private berdasarkan keputusan maintainer; visibility public memerlukan approval eksplisit terpisah.
+Current tree telah menyelesaikan Workstream A, Workstream B, pilot validation, dan final release review. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm, clean registry install smoke test berhasil, dan GitHub `v1.0.0` release sudah dipublikasikan dari source commit yang terverifikasi. Repository tetap private berdasarkan keputusan maintainer; visibility public memerlukan approval eksplisit terpisah.
 
 ## References
 
