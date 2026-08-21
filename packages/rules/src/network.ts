@@ -3,7 +3,21 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import type { Finding, RepositoryContext } from "@reposentinel/core";
 
-const LINK_PATTERN = /!?(?:\[[^\]]*\])\((https?:\/\/[^)\s]+)\)/gu;
+function* markdownLinkTargets(source: string): Generator<string> {
+  let cursor = 0;
+  while (cursor < source.length) {
+    const marker = source.indexOf("](", cursor);
+    if (marker < 0) return;
+    const closing = source.indexOf(")", marker + 2);
+    if (closing < 0) return;
+    const target = source.slice(marker + 2, closing).trim();
+    const whitespace = target.search(/\s/u);
+    const raw = whitespace < 0 ? target : target.slice(0, whitespace);
+    if (raw.startsWith("http://") || raw.startsWith("https://")) yield raw;
+    cursor = closing + 1;
+  }
+}
+
 const MAX_LINKS = 50;
 const TIMEOUT_MS = 3000;
 const CONCURRENCY = 4;
@@ -267,9 +281,7 @@ export async function runNetworkLinkChecks(
   const links: Array<{ path: string; url: URL }> = [];
   const seen = new Set<string>();
   for (const [path, source] of context.textCache) {
-    for (const match of source.matchAll(LINK_PATTERN)) {
-      const raw = match[1];
-      if (!raw) continue;
+    for (const raw of markdownLinkTargets(source)) {
       const url = safeUrl(raw);
       if (!url) continue;
       const key = url.toString();
