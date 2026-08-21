@@ -13,6 +13,7 @@
     "pack:release": "pnpm --filter reposentinel build && node scripts/pack-release.mjs",
     "release:gate": "pnpm typecheck && pnpm test && pnpm build && pnpm pack:release && node scripts/release-gate.mjs",
     "benchmark": "pnpm --filter reposentinel build && node scripts/benchmark.mjs . 5",
+    "test:stable-matrix": "node scripts/stable-matrix.mjs",
     "dogfood": "pnpm --filter reposentinel build && node scripts/dogfood.mjs",
     "dev": "pnpm --filter reposentinel dev",
     "lint": "pnpm -r lint",

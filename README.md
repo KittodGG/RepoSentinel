@@ -251,6 +251,7 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 | [GitHub Governance](docs/GITHUB_GOVERNANCE.md) | CODEOWNERS, branch-protection policy, and private-to-public visibility gate. |
 | [License Policy](docs/LICENSE_POLICY.md) | MIT status, Apache-2.0 comparison, and migration checklist. |
 | [Stable Release Readiness](docs/RELEASE_READINESS.md) | Stable quality, security, compatibility, pilot, packaging, and rollback gates. |
+| [Pilot Validation](docs/PILOT_VALIDATION.md) | External validation protocol, cohort matrix, metrics, and stop conditions. |
 
 ---
 
