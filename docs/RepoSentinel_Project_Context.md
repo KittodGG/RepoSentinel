@@ -34,8 +34,8 @@ Keputusan berikut dianggap sebagai baseline dan jangan diubah tanpa alasan yang 
 | SaaS | RepoSentinel tidak harus menjadi SaaS. Cloud dashboard bukan prioritas MVP. |
 | Privasi | Source code tidak dikirim ke server pada local scan. Network rule harus opt-in. |
 | Arsitektur | Core engine deterministic, rule modular, reporter terpisah. |
-| Urutan pengembangan | Core schema → CLI → rule pack → output → GitHub Action → profiles → extension. |
-| Auto-fix | Tidak masuk MVP. Mulai dari remediation guidance agar tidak menimbulkan side effect. |
+| Urutan pengembangan | Core schema → CLI → rule pack → output → GitHub Action → profiles → extension → local dashboard. |
+| Auto-fix | Tidak masuk initial MVP; current beta hanya mengizinkan allowlisted safe templates melalui dry-run/apply eksplisit. |
 | AI | Tidak menjadi dependency inti MVP. Jangan mulai dari fitur AI atau dashboard. |
 | Lisensi/repository profil | Jangan membuat atau mengubah LICENSE/CONTRIBUTING pada repository KittodGG tanpa permintaan eksplisit. Ini berbeda dari rule RepoSentinel yang boleh mendeteksi apakah dokumen tersebut tersedia. |
 | Gaya komunikasi | Jelaskan perbedaan antara fitur yang sudah ada, rancangan target, dan ide backlog. Jangan menyatakan fitur sudah live bila belum diuji. |
@@ -96,21 +96,21 @@ RepoSentinel tidak boleh diposisikan sebagai pengganti SAST, secret scanner ente
 - Pemeriksaan package manager, manifest, lockfile, scripts, dan metadata.
 - Pemeriksaan `.gitignore`, workflow CI, issue template, repository description, dan metadata GitHub dasar.
 - Konfigurasi melalui `.reposentinel.yml`.
-- Profiles `public`, `portfolio`, dan `npm-package`.
-- Output terminal, Markdown, dan JSON.
+- Profiles `public`, `portfolio`, `npm-package`, `academic`, `private-team`, dan `mobile-app`.
+- Output terminal, Markdown, JSON, SARIF, dan self-contained HTML.
 - Exit code berdasarkan severity threshold.
 - Minimal GitHub Action basic.
 - Rule fixture dan unit test.
 
-### Tidak termasuk MVP
+### Tidak termasuk initial MVP atau tetap dibatasi
 
 - Full SAST atau proof vulnerability.
 - Audit keamanan formal.
 - Upload source code ke cloud secara default.
-- Automatic refactor massal.
-- Dashboard multi-repository sebagai dependency inti.
-- Marketplace rule eksternal.
-- VS Code extension.
+- Automatic refactor massal; safe autofix tetap terbatas pada allowlist template.
+- Hosted SaaS dashboard, authentication, database, dan cloud dependency.
+- Remote marketplace atau remote rule execution; custom registry saat ini local JSON.
+- VS Code Marketplace publication; adapter local dan VSIX packaging tersedia.
 - AI reviewer yang menjadi komponen wajib.
 - Jaminan bahwa repository bebas credential atau vulnerability.
 

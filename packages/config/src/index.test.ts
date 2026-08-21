@@ -14,10 +14,20 @@ describe("configuration", () => {
     expect(config.ciFailOn).toBe("error");
   });
 
+  it("accepts all supported named profiles with public baseline rules", async () => {
+    for (const profile of ["academic", "private-team", "mobile-app"] as const) {
+      const root = await mkdtemp(join(tmpdir(), "reposentinel-profile-"));
+      await writeFile(join(root, ".reposentinel.yml"), `profile: ${profile}\n`);
+      expect((await loadConfig(root)).config.profile).toBe(profile);
+    }
+  });
+
   it("loads a YAML override without enabling network", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-config-"));
     await writeFile(join(root, ".reposentinel.yml"), [
+      "extends: recommended",
       "profile: npm-package",
+      "custom_rules: .reposentinel/custom-rules.json",
       "baseline: .reposentinel/baseline.json",
       "ignore:",
       "  - vendor/**",
@@ -36,6 +46,7 @@ describe("configuration", () => {
     const loaded = await loadConfig(root);
     expect(loaded.config.profile).toBe("npm-package");
     expect(loaded.config.baseline).toBe(".reposentinel/baseline.json");
+    expect(loaded.config.customRules).toBe(".reposentinel/custom-rules.json");
     expect(loaded.config.ignore).toContain("vendor/**");
     expect(loaded.config.report?.formats).toEqual(["json", "sarif"]);
     expect(loaded.config.report?.outputDir).toBe(".reposentinel/reports");
