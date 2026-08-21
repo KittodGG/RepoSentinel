@@ -1,8 +1,8 @@
 # RepoSentinel Usage Guide / Panduan Penggunaan
 
-> **Stable release:** `reposentinel@1.0.0` · **Runtime:** Node.js 24 LTS · **Mode:** local-first, network disabled by default
+> **Stable release:** `reposentinel@1.1.0` · **Runtime:** Node.js 24 LTS · **Mode:** local-first, network disabled by default
 >
-> **Rilis stable:** `reposentinel@1.0.0` · **Runtime:** Node.js 24 LTS · **Mode:** local-first, network nonaktif secara default
+> **Rilis stable:** `reposentinel@1.1.0` · **Runtime:** Node.js 24 LTS · **Mode:** local-first, network nonaktif secara default
 
 Dokumen ini adalah referensi operasional untuk pengguna RepoSentinel. README menjelaskan positioning dan Quick Start; dokumen ini menjelaskan pilihan teknis yang sering dibutuhkan saat menjalankan scanner di local repository atau CI.
 
@@ -18,13 +18,13 @@ reposentinel --version
 Untuk reproduksi yang ketat, gunakan versi eksplisit:
 
 ```bash
-npm install --global reposentinel@1.0.0
+npm install --global reposentinel@1.1.0
 ```
 
 For reproducible installation, use an explicit version:
 
 ```bash
-npm install --global reposentinel@1.0.0
+npm install --global reposentinel@1.1.0
 ```
 
 RepoSentinel juga dapat dijalankan tanpa instalasi global melalui `npx reposentinel`, atau dari workspace contributor melalui `node packages/cli/dist/index.js` setelah `pnpm build`.

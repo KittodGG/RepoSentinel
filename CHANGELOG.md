@@ -1,8 +1,8 @@
 # Changelog
 
-All notable changes to RepoSentinel are documented here. Version `1.0.0` is the current stable release; the `Unreleased` section contains verified work prepared after publication.
+All notable changes to RepoSentinel are documented here. Version `1.1.0` is the current stable release.
 
-## Unreleased — post-1.0.0 hardening
+## 1.1.0 — 22 August 2026
 
 ### Terminal layout
 

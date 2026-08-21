@@ -20,3 +20,7 @@ docs/assets/demo-frames/
 # repository or the gate silently loses its detection floor. Nothing under it
 # may be ignored.
 !fixtures/corpus-canary/**
+
+# Generated patch series are working artifacts, not source. They also embed
+# fixture credentials as diff content, which the scanner rightly flags.
+*.patch

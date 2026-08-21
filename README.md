@@ -18,11 +18,11 @@
 
 </div>
 
-> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag; earlier prerelease versions remain historical release records only. The repository is public after the maintainer’s explicit visibility approval; the stable npm and GitHub release remain available for all users.
+> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag and `1.1.0` is cut and gated for release; earlier prerelease versions remain historical release records only. The repository is public after the maintainer’s explicit visibility approval; the stable npm and GitHub release remain available for all users.
 
 ## Contribution & governance
 
-The repository is public following the stable 1.0.0 release. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution. Quality CI runs on Ubuntu, macOS, and Windows; linting uses Biome, coverage uses Vitest V8, and supply-chain analysis uses CodeQL and OpenSSF Scorecard.
+The repository is public following the stable 1.0.0 release; 1.1.0 is the current release line. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution. Quality CI runs on Ubuntu, macOS, and Windows; linting uses Biome, coverage uses Vitest V8, and supply-chain analysis uses CodeQL and OpenSSF Scorecard.
 
 | English | Bahasa Indonesia |
 |---|---|
@@ -127,7 +127,7 @@ npm install --global reposentinel@latest
 reposentinel --version
 
 # Reproducible version-pinned install
-npm install --global reposentinel@1.0.0
+npm install --global reposentinel@1.1.0
 reposentinel check . --lang en
 
 # During local development
@@ -245,11 +245,11 @@ flowchart LR
 | Custom rules | `implemented` as strict JSON registry with absence and explicit content-match modes |
 | Network link checks | `implemented` as opt-in bounded HTTP checks with internal-address blocking |
 | Portfolio dashboard | `implemented` as local JSON-to-HTML aggregation |
-| npm/package artifact | `published` as stable `reposentinel@1.0.0`; earlier prerelease artifacts remain historical |
+| npm/package artifact | `built and gated` as stable `reposentinel@1.1.0`; earlier artifacts remain historical |
 | VS Code diagnostics | `implemented` as optional local adapter; VSIX packaging verified |
-| npm publication | `published` as `reposentinel@1.0.0` under `latest`; clean registry install verified |
+| npm publication | `1.0.0` published under `latest`; `1.1.0` cut and gated, awaiting the maintainer-run release workflow |
 | VS Code Marketplace publication | `pending publisher identity and VSCE_PAT` |
-| Stable production | `published` as `1.0.0`; technical pilot and release gates verified |
+| Stable production | `1.0.0` published; `1.1.0` gated and ready to publish |
 
 ### Safety boundaries
 
@@ -334,7 +334,7 @@ npm install --global reposentinel@latest
 reposentinel --version
 
 # Reproducible version-pinned install
-npm install --global reposentinel@1.0.0
+npm install --global reposentinel@1.1.0
 reposentinel check . --lang id
 
 # Or run from the workspace while contributing
@@ -392,7 +392,7 @@ Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, bor
 
 ### Status saat ini
 
-Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository sudah public setelah approval eksplisit maintainer untuk visibility public; stable npm dan GitHub release tersedia untuk semua pengguna.
+Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 27-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.1.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository sudah public setelah approval eksplisit maintainer untuk visibility public; stable npm dan GitHub release tersedia untuk semua pengguna.
 
 ---
 
