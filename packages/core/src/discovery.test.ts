@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createRepositoryContext } from "./discovery.js";
+import { createRepositoryContext, readChangedPaths } from "./discovery.js";
 import type { ResolvedConfig } from "./index.js";
 
 const execFile = promisify(execFileCallback);
@@ -56,5 +56,25 @@ describe("safe discovery", () => {
     const envFile = context.files.find((file) => file.relativePath === ".env");
     expect(envFile?.isTracked).toBe(true);
     expect(context.files.some((file) => file.kind === "directory")).toBe(false);
+    expect(context.git?.available).toBe(true);
+  });
+
+  it("returns deterministic paths changed from a Git base commit", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-changed-"));
+    await execFile("git", ["-C", root, "init", "--quiet"]);
+    await execFile("git", ["-C", root, "config", "user.email", "reposentinel@example.test"]);
+    await execFile("git", ["-C", root, "config", "user.name", "RepoSentinel Test"]);
+    await writeFile(join(root, "README.md"), "# Before");
+    await execFile("git", ["-C", root, "add", "README.md"]);
+    await execFile("git", ["-C", root, "commit", "--quiet", "-m", "base"]);
+    const baseRef = (await execFile("git", ["-C", root, "rev-parse", "HEAD"])).stdout.trim();
+    await writeFile(join(root, "README.md"), "# After");
+    await writeFile(join(root, "CONTRIBUTING.md"), "# Contributing");
+    await execFile("git", ["-C", root, "add", "."]);
+    await execFile("git", ["-C", root, "commit", "--quiet", "-m", "change"]);
+
+    const changed = await readChangedPaths(root, baseRef);
+    expect(changed.baseRef).toBe(baseRef);
+    expect(changed.paths).toEqual(["CONTRIBUTING.md", "README.md"]);
   });
 });

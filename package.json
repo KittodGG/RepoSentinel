@@ -12,6 +12,7 @@
     "build": "pnpm -r build",
     "pack:alpha": "pnpm --filter reposentinel build && node scripts/pack-alpha.mjs",
     "pack:beta": "pnpm --filter reposentinel build && node scripts/pack-alpha.mjs",
+    "release:gate": "pnpm typecheck && pnpm test && pnpm build && pnpm pack:beta && node scripts/release-gate.mjs",
     "dogfood": "pnpm --filter reposentinel build && node scripts/dogfood.mjs",
     "dev": "pnpm --filter reposentinel dev",
     "lint": "pnpm -r lint",

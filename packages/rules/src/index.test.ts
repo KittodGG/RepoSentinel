@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { RepositoryContext, RepositoryFile, ResolvedConfig } from "@reposentinel/core";
 import { enabledRules, rules, runRules } from "./index.js";
 
-function file(relativePath: string, kind: RepositoryFile["kind"] = "text"): RepositoryFile {
+function file(relativePath: string, kind: RepositoryFile["kind"] = "text", sizeBytes = 20, isTracked?: boolean): RepositoryFile {
   return {
     relativePath,
     absolutePath: `/fixture/${relativePath}`,
     kind,
-    sizeBytes: 20,
-    isIgnored: false
+    sizeBytes,
+    isIgnored: false,
+    ...(isTracked === undefined ? {} : { isTracked })
   };
 }
 
@@ -73,5 +74,40 @@ describe("rules", () => {
     const text = { "README.md": "# package\n\nA useful package with a clear description and setup instructions.", "package.json": "{\"name\":\"demo-package\"}" };
     expect(enabledRules(context("public", files, text)).some((rule) => rule.id === "package.manifest-name")).toBe(false);
     expect(enabledRules(context("npm-package", files, text)).some((rule) => rule.id === "package.manifest-name")).toBe(true);
+  });
+
+  it("checks governance files and tracked generated artifacts", () => {
+    const incomplete = runRules(context("public", [
+      file("README.md"),
+      file(".gitignore"),
+      file("assets/model.bin", "binary", 6 * 1024 * 1024, true),
+      file("dist/app.js", "text", 100, true)
+    ], {}));
+    expect(incomplete.map((finding) => finding.ruleId)).toContain("community.contributing-guide");
+    expect(incomplete.map((finding) => finding.ruleId)).toContain("community.code-of-conduct");
+    expect(incomplete.map((finding) => finding.ruleId)).toContain("git.large-file");
+    expect(incomplete.map((finding) => finding.ruleId)).toContain("git.generated-tracked");
+
+    const complete = runRules(context("public", [
+      file("README.md"),
+      file(".gitignore"),
+      file("CONTRIBUTING.md"),
+      file("CODE_OF_CONDUCT.md"),
+      file("assets/model.bin", "binary", 6 * 1024 * 1024, false)
+    ], {}));
+    expect(complete.map((finding) => finding.ruleId)).not.toContain("community.contributing-guide");
+    expect(complete.map((finding) => finding.ruleId)).not.toContain("community.code-of-conduct");
+    expect(complete.map((finding) => finding.ruleId)).not.toContain("git.large-file");
+    expect(complete.map((finding) => finding.ruleId)).not.toContain("git.generated-tracked");
+  });
+
+  it("reports detached HEAD only when local Git metadata is available", () => {
+    const detached = context("public", [file("README.md"), file(".gitignore")], {});
+    detached.git = { available: true };
+    expect(runRules(detached).map((finding) => finding.ruleId)).toContain("branch.default");
+
+    const attached = context("public", [file("README.md"), file(".gitignore")], {});
+    attached.git = { available: true, currentBranch: "main" };
+    expect(runRules(attached).map((finding) => finding.ruleId)).not.toContain("branch.default");
   });
 });

@@ -1,6 +1,6 @@
 name: RepoSentinel
 
-description: Scan repository readiness locally in GitHub Actions with multilingual terminal, Markdown, or JSON output.
+description: Scan repository readiness locally in GitHub Actions with multilingual terminal, Markdown, JSON, SARIF, or HTML output.
 author: RepoSentinel contributors
 branding:
   color: cyan
@@ -20,9 +20,13 @@ inputs:
     required: false
     default: error
   format:
-    description: "Report format: terminal, markdown, json, or sarif."
+    description: "Report format: terminal, markdown, json, sarif, or html."
     required: false
     default: markdown
+  changed-since:
+    description: "Optional Git base ref; only findings on changed files are reported."
+    required: false
+    default: ""
   output:
     description: Optional report path relative to the repository workspace.
     required: false
@@ -57,10 +61,14 @@ runs:
         RS_LANG: ${{ inputs.lang }}
         RS_FAIL_ON: ${{ inputs.fail-on }}
         RS_FORMAT: ${{ inputs.format }}
+        RS_CHANGED_SINCE: ${{ inputs.changed-since }}
         RS_OUTPUT: ${{ inputs.output }}
       run: |
         set -euo pipefail
         args=(check "$GITHUB_WORKSPACE" --profile "$RS_PROFILE" --lang "$RS_LANG" --fail-on "$RS_FAIL_ON" --format "$RS_FORMAT" --no-color)
+        if [[ -n "$RS_CHANGED_SINCE" ]]; then
+          args+=(--changed-since "$RS_CHANGED_SINCE")
+        fi
         if [[ -n "$RS_OUTPUT" ]]; then
           args+=(--output "$GITHUB_WORKSPACE/$RS_OUTPUT")
         fi

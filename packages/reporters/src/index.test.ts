@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Finding } from "@reposentinel/core";
-import { renderJsonReport, renderMarkdownReport, renderSarifReport, renderTerminalReport } from "./index.js";
+import { renderHtmlReport, renderJsonReport, renderMarkdownReport, renderSarifReport, renderTerminalReport } from "./index.js";
 
 const warning: Finding = {
   ruleId: "documentation.quickstart",
@@ -84,5 +84,39 @@ describe("reporters", () => {
     expect(parsed.locale).toBe("en");
     expect(parsed.findings[0]?.ruleId).toBe("documentation.quickstart");
     expect(output).not.toContain("\\u001b[");
+  });
+
+  it("exposes changed-files scope in every report family", () => {
+    const options = {
+      locale: "en" as const,
+      repository: "fixture",
+      profile: "public" as const,
+      findings: [warning],
+      threshold: "error" as const,
+      changedSince: "origin/main",
+      changedFiles: ["README.md"]
+    };
+    expect(renderTerminalReport({ ...options, filesScanned: 2, ignoredCount: 0, color: false })).toContain("changed since origin/main");
+    expect(renderMarkdownReport(options)).toContain("Changed files: `1`");
+    expect(renderJsonReport(options)).toContain('"mode": "changed-files"');
+    expect(renderSarifReport(options)).toContain('"baseRef": "origin/main"');
+  });
+
+  it("renders a self-contained escaped HTML report", () => {
+    const output = renderHtmlReport({
+      locale: "en",
+      repository: "fixture <script>",
+      profile: "public",
+      findings: [{ ...warning, message: "Unsafe <message> & value", evidence: "\"quoted\"" }],
+      threshold: "error",
+      changedSince: "origin/main",
+      changedFiles: ["README.md"]
+    });
+    expect(output).toContain("<!doctype html>");
+    expect(output).toContain("Changed-files mode");
+    expect(output).toContain("Unsafe &lt;message&gt; &amp; value");
+    expect(output).toContain("fixture &lt;script&gt;");
+    expect(output).not.toContain("<script>");
+    expect(output).not.toContain("https://cdn.");
   });
 });

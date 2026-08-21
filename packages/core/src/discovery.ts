@@ -3,7 +3,7 @@ import { lstat, open, readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import ignore from "ignore";
-import type { RepositoryContext, RepositoryFile, RepositoryProfile, ResolvedConfig } from "./index.js";
+import type { GitMetadata, RepositoryContext, RepositoryFile, RepositoryProfile, ResolvedConfig } from "./index.js";
 
 export type DiscoveryOptions = {
   maxFileBytes?: number;
@@ -13,6 +13,12 @@ export type DiscoveryResult = {
   files: RepositoryFile[];
   textCache: Map<string, string>;
   ignoredCount: number;
+  git: GitMetadata;
+};
+
+export type ChangedFilesResult = {
+  baseRef: string;
+  paths: readonly string[];
 };
 
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024;
@@ -27,8 +33,36 @@ async function readTrackedPaths(root: string): Promise<ReadonlySet<string>> {
   }
 }
 
+async function readGitMetadata(root: string): Promise<GitMetadata> {
+  try {
+    const [branchResult, defaultBranchResult] = await Promise.all([
+      execFile("git", ["-C", root, "branch", "--show-current"], { maxBuffer: 1024 * 1024 }),
+      execFile("git", ["-C", root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], { maxBuffer: 1024 * 1024 })
+    ]);
+    const currentBranch = branchResult.stdout.trim() || undefined;
+    const remoteHead = defaultBranchResult.stdout.trim();
+    const defaultBranch = remoteHead.startsWith("origin/") ? remoteHead.slice("origin/".length) : remoteHead || undefined;
+    return { available: true, ...(currentBranch ? { currentBranch } : {}), ...(defaultBranch ? { defaultBranch } : {}) };
+  } catch {
+    try {
+      const branchResult = await execFile("git", ["-C", root, "branch", "--show-current"], { maxBuffer: 1024 * 1024 });
+      const currentBranch = branchResult.stdout.trim() || undefined;
+      return { available: true, ...(currentBranch ? { currentBranch } : {}) };
+    } catch {
+      return { available: false };
+    }
+  }
+}
+
 function toPosix(value: string): string {
   return value.split("\\").join("/");
+}
+
+export async function readChangedPaths(root: string, baseRef: string): Promise<ChangedFilesResult> {
+  const resolvedRoot = resolve(root);
+  const result = await execFile("git", ["-C", resolvedRoot, "diff", "--name-only", "-z", `${baseRef}...HEAD`], { maxBuffer: 4 * 1024 * 1024 });
+  const paths = result.stdout.split("\0").filter(Boolean).map(toPosix).sort((left, right) => left.localeCompare(right));
+  return { baseRef, paths };
 }
 
 async function isBinary(path: string, maxBytes: number): Promise<boolean> {
@@ -46,7 +80,7 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
   const resolvedRoot = resolve(root);
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const matcher = ignore().add(config.ignore);
-  const trackedPaths = await readTrackedPaths(resolvedRoot);
+  const [trackedPaths, git] = await Promise.all([readTrackedPaths(resolvedRoot), readGitMetadata(resolvedRoot)]);
   const files: RepositoryFile[] = [];
   const textCache = new Map<string, string>();
   let ignoredCount = 0;
@@ -85,7 +119,7 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
 
   await visit(resolvedRoot);
   files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
-  return { files, textCache, ignoredCount };
+  return { files, textCache, ignoredCount, git };
 }
 
 export async function createRepositoryContext(
@@ -95,5 +129,5 @@ export async function createRepositoryContext(
   options?: DiscoveryOptions
 ): Promise<RepositoryContext & { ignoredCount: number }> {
   const result = await discoverRepository(root, config, options);
-  return { root: resolve(root), profile, config, files: result.files, textCache: result.textCache, ignoredCount: result.ignoredCount };
+  return { root: resolve(root), profile, config, files: result.files, textCache: result.textCache, ignoredCount: result.ignoredCount, git: result.git };
 }

@@ -50,6 +50,19 @@ function isSafeExamplePath(path: string): boolean {
   return path.startsWith("docs/") || path.startsWith("fixtures/") || /(^|[./_-])(test|spec)([./_-]|$)/iu.test(path) || path.toLowerCase().includes("readme");
 }
 
+function hasAnyFile(context: RepositoryContext, paths: readonly string[]): boolean {
+  return paths.some((path) => fileExists(context, path));
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KiB`;
+}
+
+function isLikelyGeneratedPath(path: string): boolean {
+  return /(^|\/)(dist|build|coverage|out|generated|\.next|storybook-static)(\/|$)/iu.test(path) || /\.map$/iu.test(path);
+}
+
 export const rules: readonly RuleDefinition[] = [
   {
     id: "documentation.readme-exists",
@@ -366,6 +379,86 @@ export const rules: readonly RuleDefinition[] = [
             message: "No visible demo, preview, or live URL was detected for the portfolio profile.",
             remediation: "Add a Demo or Preview section near the top of README.md."
           })];
+    }
+  },
+  {
+    id: "community.contributing-guide",
+    category: "community",
+    title: "Contributor guide is present",
+    defaultSeverity: "info",
+    profiles: ["public", "portfolio", "npm-package"],
+    run(context) {
+      return hasAnyFile(context, ["CONTRIBUTING.md", ".github/CONTRIBUTING.md", "docs/CONTRIBUTING.md"])
+        ? []
+        : [finding(this, context, {
+            message: "No contributor guide was detected.",
+            remediation: "Add CONTRIBUTING.md with setup, test, review, and pull request guidance."
+          })];
+    }
+  },
+  {
+    id: "community.code-of-conduct",
+    category: "community",
+    title: "Code of conduct is present",
+    defaultSeverity: "info",
+    profiles: ["public", "portfolio"],
+    run(context) {
+      return hasAnyFile(context, ["CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT.txt", ".github/CODE_OF_CONDUCT.md", "docs/CODE_OF_CONDUCT.md"])
+        ? []
+        : [finding(this, context, {
+            message: "No code of conduct was detected.",
+            remediation: "Add CODE_OF_CONDUCT.md with expected behavior and a private reporting path for community concerns."
+          })];
+    }
+  },
+  {
+    id: "git.large-file",
+    category: "git",
+    title: "Tracked files stay below the large-file threshold",
+    defaultSeverity: "warning",
+    profiles: ["public", "portfolio", "npm-package"],
+    run(context) {
+      const thresholdBytes = 5 * 1024 * 1024;
+      return context.files
+        .filter((file) => file.isTracked === true && file.sizeBytes > thresholdBytes)
+        .map((file) => finding(this, context, {
+          path: file.relativePath,
+          message: "A tracked file exceeds the 5 MiB repository hygiene threshold.",
+          evidence: `${formatBytes(file.sizeBytes)} tracked file`,
+          remediation: "Move large binaries to Git LFS or release storage, or document why the file must remain tracked."
+        }));
+    }
+  },
+  {
+    id: "git.generated-tracked",
+    category: "git",
+    title: "Generated output is not tracked accidentally",
+    defaultSeverity: "warning",
+    profiles: ["public", "portfolio", "npm-package"],
+    run(context) {
+      return context.files
+        .filter((file) => file.isTracked === true && isLikelyGeneratedPath(file.relativePath))
+        .map((file) => finding(this, context, {
+          path: file.relativePath,
+          message: "A generated-looking file is tracked by Git.",
+          evidence: file.relativePath,
+          remediation: "Confirm the artifact is intentionally versioned; otherwise ignore the generated path and remove it from Git tracking."
+        }));
+    }
+  },
+  {
+    id: "branch.default",
+    category: "git",
+    title: "Default branch context is available",
+    defaultSeverity: "info",
+    profiles: ["public", "portfolio", "npm-package"],
+    run(context) {
+      if (!context.git?.available || context.git.currentBranch) return [];
+      return [finding(this, context, {
+        path: ".git/HEAD",
+        message: "The repository is in a detached HEAD state, so the default branch cannot be inferred locally.",
+        remediation: "Check out the intended working branch or provide branch context explicitly in CI."
+      })];
     }
   },
   {

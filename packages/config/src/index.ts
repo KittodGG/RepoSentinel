@@ -6,7 +6,7 @@ import type { ReportFormat, RepositoryProfile, ResolvedConfig, Severity } from "
 
 const severitySchema = z.enum(["critical", "error", "warning", "info", "off"]);
 const profileSchema = z.enum(["public", "portfolio", "npm-package"]);
-const reportFormatSchema = z.enum(["terminal", "markdown", "json", "sarif"]);
+const reportFormatSchema = z.enum(["terminal", "markdown", "json", "sarif", "html"]);
 
 const rawConfigSchema = z.object({
   extends: z.string().optional(),

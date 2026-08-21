@@ -9,6 +9,7 @@ import pc from "picocolors";
 import {
   createRepositoryContext,
   filterBaselineFindings,
+  readChangedPaths,
   loadBaseline,
   summarizeFindings,
   writeBaseline,
@@ -19,7 +20,7 @@ import {
 } from "@reposentinel/core";
 import { loadConfig } from "@reposentinel/config";
 import { rules as ruleDefinitions, runRules } from "@reposentinel/rules";
-import { renderJsonReport as renderJsonReportExternal, renderMarkdownReport as renderMarkdownReportExternal, renderSarifReport as renderSarifReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
+import { renderHtmlReport as renderHtmlReportExternal, renderJsonReport as renderJsonReportExternal, renderMarkdownReport as renderMarkdownReportExternal, renderSarifReport as renderSarifReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
 import {
   createTranslator,
   isSupportedLocale,
@@ -32,7 +33,7 @@ const VERSION = "0.1.0-beta.1";
 const profiles = ["public", "portfolio", "npm-package"] as const;
 const thresholds = ["critical", "error", "warning", "info"] as const;
 
-type OutputFormat = "terminal" | "json" | "markdown" | "sarif";
+type OutputFormat = "terminal" | "json" | "markdown" | "sarif" | "html";
 
 type CheckOptions = {
   profile: string;
@@ -42,6 +43,7 @@ type CheckOptions = {
   format?: OutputFormat;
   output?: string;
   baseline?: string;
+  changedSince?: string;
 };
 
 function explicitLocale(argv: string[]): string | undefined {
@@ -151,14 +153,21 @@ type ScanData = {
   threshold: ExitThreshold;
   context: Awaited<ReturnType<typeof createRepositoryContext>>;
   findings: Finding[];
+  changedSince?: string;
+  changedFiles?: readonly string[];
 };
 
-async function collectScan(target: string, profile: RepositoryProfile, threshold: ExitThreshold, applyBaseline = true, baselineOverride?: string): Promise<ScanData> {
+async function collectScan(target: string, profile: RepositoryProfile, threshold: ExitThreshold, applyBaseline = true, baselineOverride?: string, changedSince?: string): Promise<ScanData> {
   const root = resolve(target);
   const loaded = await loadConfig(root, profile);
   const config = { ...loaded.config, ciFailOn: threshold };
   const context = await createRepositoryContext(root, profile, config);
   const rawFindings = runRules(context);
+  const changed = changedSince ? await readChangedPaths(root, changedSince) : undefined;
+  const changedSet = changed ? new Set(changed.paths) : undefined;
+  const scopedFindings = changedSet
+    ? rawFindings.filter((finding) => !finding.path || changedSet.has(finding.path))
+    : rawFindings;
   const baselinePath = baselineOverride ?? config.baseline ?? ".reposentinel/baseline.json";
   const baseline = applyBaseline ? await loadBaseline(root, baselinePath) : new Set<string>();
   return {
@@ -166,7 +175,8 @@ async function collectScan(target: string, profile: RepositoryProfile, threshold
     profile,
     threshold,
     context,
-    findings: filterBaselineFindings(rawFindings, baseline)
+    findings: filterBaselineFindings(scopedFindings, baseline),
+    ...(changed ? { changedSince: changed.baseRef, changedFiles: changed.paths } : {})
   };
 }
 
@@ -177,15 +187,18 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
 
   try {
     await access(root);
-    const scan = await collectScan(target, profile, threshold, true, options.baseline);
+    const scan = await collectScan(target, profile, threshold, true, options.baseline, options.changedSince);
     const summary = summarizeFindings(scan.findings, threshold);
+    const changedOptions = scan.changedSince ? { changedSince: scan.changedSince, changedFiles: scan.changedFiles ?? [] } : {};
     const renderReport = (format: OutputFormat): string => format === "json"
-      ? renderJsonReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold })
+      ? renderJsonReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, ...changedOptions })
       : format === "markdown"
-        ? renderMarkdownReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold })
+        ? renderMarkdownReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, ...changedOptions })
         : format === "sarif"
-          ? renderSarifReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold })
-          : renderTerminalReportExternal({
+          ? renderSarifReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, ...changedOptions })
+          : format === "html"
+            ? renderHtmlReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, ...changedOptions })
+            : renderTerminalReportExternal({
               locale,
               repository: basename(scan.root),
               profile,
@@ -193,6 +206,7 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
               ignoredCount: scan.context.ignoredCount,
               findings: scan.findings,
               threshold,
+              ...changedOptions,
               color: options.color !== false
             });
     if (options.output) {
@@ -209,7 +223,7 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
         const reportDir = resolveInsideRepository(scan.root, outputDir);
         await mkdir(reportDir, { recursive: true });
         const configuredFormats = scan.context.config.report?.formats ?? ["terminal"];
-        const extensions: Record<OutputFormat, string> = { terminal: "txt", markdown: "md", json: "json", sarif: "sarif" };
+        const extensions: Record<OutputFormat, string> = { terminal: "txt", markdown: "md", json: "json", sarif: "sarif", html: "html" };
         for (const format of configuredFormats) {
           await writeFile(resolve(reportDir, `reposentinel-report.${extensions[format]}`), renderReport(format), "utf8");
         }
@@ -331,9 +345,10 @@ function buildProgram(locale: Locale): Command {
     .option("--profile <profile>", "Repository profile", "public")
     .option("--lang <locale>", t("cli.option.lang"))
     .option("--fail-on <severity>", "Exit threshold", "error")
-    .option("--format <format>", "Output format: terminal, markdown, json, sarif")
+    .option("--format <format>", "Output format: terminal, markdown, json, sarif, html")
     .option("--output <file>", "Write the report to a file")
     .option("--baseline <file>", "Baseline path relative to the repository root")
+    .option("--changed-since <ref>", "Only report findings on files changed since a Git base ref")
     .option("--no-color", "Disable ANSI color output")
     .action(async (target = ".", options: CheckOptions) => {
       if (!profiles.includes(options.profile as RepositoryProfile)) {
@@ -346,8 +361,8 @@ function buildProgram(locale: Locale): Command {
         process.exitCode = 2;
         return;
       }
-      if (options.format && options.format !== "terminal" && options.format !== "markdown" && options.format !== "json" && options.format !== "sarif") {
-        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, markdown, json, sarif.\n`);
+      if (options.format && options.format !== "terminal" && options.format !== "markdown" && options.format !== "json" && options.format !== "sarif" && options.format !== "html") {
+        process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, markdown, json, sarif, html.\n`);
         process.exitCode = 2;
         return;
       }

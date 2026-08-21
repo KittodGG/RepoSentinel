@@ -12,7 +12,7 @@ export type RuleCategory =
   | "portfolio";
 export type RepositoryProfile = "public" | "portfolio" | "npm-package";
 export type ExitThreshold = Severity;
-export type ReportFormat = "terminal" | "markdown" | "json" | "sarif";
+export type ReportFormat = "terminal" | "markdown" | "json" | "sarif" | "html";
 export type FileKind = "text" | "binary" | "symlink" | "directory";
 
 export type Finding = {
@@ -39,12 +39,19 @@ export type RepositoryFile = {
   isTracked?: boolean;
 };
 
+export type GitMetadata = {
+  available: boolean;
+  currentBranch?: string;
+  defaultBranch?: string;
+};
+
 export type RepositoryContext = {
   root: string;
   profile: RepositoryProfile;
   files: readonly RepositoryFile[];
   textCache: ReadonlyMap<string, string>;
   config: ResolvedConfig;
+  git?: GitMetadata;
 };
 
 export type ResolvedConfig = {
@@ -153,7 +160,7 @@ export function fingerprintFor(ruleId: string, path = "", line = 0): string {
   return `${ruleId}:${path}:${line}`;
 }
 
-export { createRepositoryContext, discoverRepository } from "./discovery.js";
-export type { DiscoveryOptions, DiscoveryResult } from "./discovery.js";
+export { createRepositoryContext, discoverRepository, readChangedPaths } from "./discovery.js";
+export type { ChangedFilesResult, DiscoveryOptions, DiscoveryResult } from "./discovery.js";
 
 export { createBaselineDocument, filterBaselineFindings, loadBaseline, writeBaseline, BASELINE_SCHEMA } from "./baseline.js";

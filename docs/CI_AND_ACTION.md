@@ -52,6 +52,20 @@ For GitHub Code Scanning-compatible output:
     output: artifacts/reposentinel-report.sarif
 ```
 
+For a self-contained browser report limited to pull-request changes:
+
+```yaml
+- name: Export changed-files HTML report
+  uses: KittodGG/RepoSentinel@main
+  with:
+    profile: public
+    lang: en
+    fail-on: error
+    format: html
+    changed-since: origin/main
+    output: artifacts/reposentinel-report.html
+```
+
 The action installs the action repository workspace with the pinned lockfile, builds the publishable `packages/cli` package, and executes its generated bundle. It is designed for source-checkout usage before the npm package is published.
 
 ## CI-safe behavior
@@ -74,4 +88,4 @@ A phase-10 change is not ready to merge until the following conditions hold:
 
 ## Known pre-beta limitations
 
-The action currently builds the CLI from the checked-out action repository rather than a registry-published version. It supports terminal, Markdown, JSON, and SARIF output; baseline suppression is available when a repository-local `.reposentinel/baseline.json` is present. Third-party action references use version tags during the initial phase; pinning them to reviewed commit SHAs is a hardening task before beta production. The action does not yet upload a report artifact automatically; the caller can add `actions/upload-artifact` after the scan step.
+The action currently builds the CLI from the checked-out action repository rather than a registry-published version. It supports terminal, Markdown, JSON, SARIF, and HTML output; baseline suppression is available when a repository-local `.reposentinel/baseline.json` is present, and changed-files mode is available through the `changed-since` input. Third-party action references use version tags during the initial phase; pinning them to reviewed commit SHAs is a hardening task before beta production. The action does not yet upload a report artifact automatically; the caller can add `actions/upload-artifact` after the scan step.

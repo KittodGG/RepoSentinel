@@ -136,6 +136,12 @@ reposentinel report . --format markdown --output report.md
 # Export a SARIF report for code scanning integrations
 reposentinel report . --format sarif --output report.sarif
 
+# Export a self-contained offline HTML report
+reposentinel report . --format html --output report.html
+
+# Scan only findings on files changed since a Git base ref
+reposentinel check . --changed-since origin/main --format json
+
 # Create a baseline, then focus future scans on new findings
 reposentinel baseline create .
 reposentinel check . --format json
@@ -171,12 +177,14 @@ flowchart LR
 | CLI visual interaction specification | `implemented` as documentation |
 | Multilingual architecture decision | `implemented` as documentation |
 | Core engine | `implemented` as deterministic development foundation |
-| Rule pack | `implemented` as initial 16-rule pack |
+| Rule pack | `implemented` as initial 21-rule pack, including governance and Git hygiene checks |
 | CLI package | `implemented` as local development CLI |
 | GitHub Action | `implemented` as composite action and source-checkout workflow |
 | Dogfooding and hardening | `implemented` as local self-scan and safety gates |
 | SARIF reporter | `implemented` and schema-validated |
+| HTML reporter | `implemented` as self-contained offline report |
 | Baseline flow | `implemented` as repository-local fingerprint suppression |
+| Changed-files mode | `implemented` with explicit Git base ref and deterministic scope |
 | npm/package artifact | `beta candidate` `v0.1.0-beta.1` GitHub prerelease |
 | npm publication | `pending owner-approved registry publication` |
 | Beta production | `beta candidate published` as `v0.1.0-beta.1`; pilot sign-off pending |
@@ -287,7 +295,7 @@ Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, bor
 
 ### Status saat ini
 
-Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, initial rule pack, local development CLI, reporter Markdown/JSON/SARIF, baseline flow, GitHub Action, dogfooding, dan hardening gate sudah tersedia. Package `reposentinel` beta candidate `v0.1.0-beta.1` sudah diterbitkan sebagai GitHub prerelease; pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
+Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta candidate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Package `reposentinel` beta candidate `v0.1.0-beta.1` sudah diterbitkan sebagai GitHub prerelease; npm registry publication menunggu npm authentication dan explicit release approval, sedangkan pilot sign-off dan stabilisasi lanjutan tetap diperlukan sebelum release stable.
 
 ---
 
@@ -304,7 +312,7 @@ Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta 
 | Discovery | `fast-glob` + `ignore` |
 | Markdown | Unified/Remark AST |
 | Test | Vitest |
-| Reporters | Custom deterministic terminal, Markdown, JSON, SARIF |
+| Reporters | Custom deterministic terminal, Markdown, JSON, SARIF, HTML |
 
 Keputusan ini mengutamakan runtime LTS, dependency yang terukur, core engine yang terpisah dari UI, dan kemampuan fallback untuk CI/SSH. Detailnya ada di [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md).
 
