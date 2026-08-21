@@ -48,6 +48,8 @@ describe("configuration", () => {
     expect(loaded.config.baseline).toBe(".reposentinel/baseline.json");
     expect(loaded.config.customRules).toBe(".reposentinel/custom-rules.json");
     expect(loaded.config.ignore).toContain("vendor/**");
+    expect(loaded.config.ignore).toContain("build/**");
+    expect(loaded.config.ignore).toContain("__pycache__/**");
     expect(loaded.config.report?.formats).toEqual(["json", "sarif"]);
     expect(loaded.config.report?.outputDir).toBe(".reposentinel/reports");
     expect(loaded.config.ciFailOn).toBe("warning");

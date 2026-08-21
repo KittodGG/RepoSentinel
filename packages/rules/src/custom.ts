@@ -8,6 +8,7 @@ export type CustomRuleSpec = {
   profiles?: string[];
   path: string;
   contentIncludes?: string;
+  match?: "absent" | "contains";
   message: string;
   remediation: string;
   docsUrl?: string;
@@ -54,6 +55,17 @@ function createCustomRule(spec: CustomRuleSpec): RuleDefinition {
     profiles: spec.profiles ?? ["public", "portfolio", "npm-package"],
     run(context) {
       const matched = context.files.filter((file) => matches(file, spec, expression, context));
+      if (spec.match === "contains") {
+        return matched.map((file) => ({
+          ruleId: spec.id,
+          category,
+          severity: spec.severity,
+          message: spec.message,
+          path: file.relativePath,
+          remediation: spec.remediation,
+          ...(spec.docsUrl ? { docsUrl: spec.docsUrl } : {})
+        }));
+      }
       if (matched.length > 0) return [];
       const finding: Finding = {
         ruleId: spec.id,
@@ -91,8 +103,11 @@ export function loadCustomRules(source: string): RuleDefinition[] {
         : (() => { throw new Error(`Custom rule ${id} profiles must be an array.`); })();
     if (selectedProfiles?.some((profile) => !profiles.has(profile))) throw new Error(`Custom rule ${id} references an unsupported profile.`);
     const contentIncludes = record.contentIncludes === undefined ? undefined : assertString(record.contentIncludes, "contentIncludes", index);
+    const match = record.match === undefined ? undefined : assertString(record.match, "match", index);
+    if (match !== undefined && match !== "absent" && match !== "contains") throw new Error(`Custom rule ${id} has unsupported match mode: ${match}.`);
+    if (match === "contains" && contentIncludes === undefined) throw new Error(`Custom rule ${id} requires contentIncludes when match is contains.`);
     const title = record.title === undefined ? undefined : assertString(record.title, "title", index);
     const docsUrl = record.docsUrl === undefined ? undefined : assertString(record.docsUrl, "docsUrl", index);
-    return createCustomRule({ id, severity, path, message, remediation, ...(title ? { title } : {}), ...(selectedProfiles ? { profiles: selectedProfiles } : {}), ...(contentIncludes ? { contentIncludes } : {}), ...(docsUrl ? { docsUrl } : {}) });
+    return createCustomRule({ id, severity, path, message, remediation, ...(title ? { title } : {}), ...(selectedProfiles ? { profiles: selectedProfiles } : {}), ...(contentIncludes ? { contentIncludes } : {}), ...(match ? { match: match as "absent" | "contains" } : {}), ...(docsUrl ? { docsUrl } : {}) });
   });
 }

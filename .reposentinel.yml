@@ -2,13 +2,14 @@ extends: recommended
 profile: public
 
 ignore:
+  # Positive security fixtures are validated by the stable matrix, not dogfood.
   - fixtures/**
   - node_modules/**
   - dist/**
   - coverage/**
 
-rules:
-  community.license-present: off
+# Keep all built-in rules enabled in dogfood so governance regressions are visible.
+rules: {}
 
 security:
   network: false

@@ -38,6 +38,16 @@ describe("network link checks", () => {
     expect(JSON.stringify(findings)).not.toContain("token=do-not-leak");
   });
 
+  it("blocks private, metadata, and mapped loopback addresses before fetch", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const resolveHostname = vi.fn().mockResolvedValue([{ address: "10.0.0.7", family: 4 }]);
+    const findings = await runNetworkLinkChecks(context("[metadata](http://169.254.169.254/latest)\n[private](https://internal.example)\n[mapped](http://[::ffff:127.0.0.1]/health)"), { enabled: true, resolveHostname });
+    expect(findings).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resolveHostname).toHaveBeenCalledWith("internal.example");
+  });
+
   it("skips localhost targets and caps the number of checked links", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ status: 200 });
     vi.stubGlobal("fetch", fetchMock);

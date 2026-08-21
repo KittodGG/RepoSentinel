@@ -20,6 +20,9 @@ function safeBaselinePath(root: string, baselinePath: string): string {
 }
 
 export function createBaselineDocument(findings: readonly Finding[]): BaselineDocument {
+  if (findings.some((finding) => finding.severity === "critical")) {
+    throw new Error("Baseline cannot include critical findings.");
+  }
   return {
     schemaVersion: BASELINE_SCHEMA,
     fingerprints: [...new Set(findings.map((finding) => finding.fingerprint).filter((value): value is string => Boolean(value)))].sort()

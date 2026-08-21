@@ -175,6 +175,7 @@ reposentinel check . --network --format json
 
 # Aggregate local JSON reports into a portfolio dashboard
 reposentinel dashboard .reposentinel/reports --output dashboard.html
+# `--output` is resolved inside the report directory argument
 
 # Create a baseline, then focus future scans on new findings
 reposentinel baseline create .
@@ -215,14 +216,14 @@ flowchart LR
 | CLI package | `implemented` as local development CLI |
 | GitHub Action | `implemented` as composite action and source-checkout workflow |
 | Dogfooding and hardening | `implemented` as local self-scan and safety gates |
-| SARIF reporter | `implemented` and schema-validated |
+| SARIF reporter | `verified` with schema and semantic rule-index coverage |
 | HTML reporter | `implemented` as self-contained offline report |
 | Baseline flow | `implemented` as repository-local fingerprint suppression |
 | Changed-files mode | `implemented` with explicit Git base ref and deterministic scope |
 | Safe autofix | `implemented` as allowlisted dry-run/apply templates |
 | Watch mode | `implemented` with debounce and CI one-shot fallback |
-| Custom rules | `implemented` as strict JSON registry with glob-only matching |
-| Network link checks | `implemented` as explicit opt-in bounded HTTP checks |
+| Custom rules | `implemented` as strict JSON registry with absence and explicit content-match modes |
+| Network link checks | `implemented` as opt-in bounded HTTP checks with internal-address blocking |
 | Portfolio dashboard | `implemented` as local JSON-to-HTML aggregation |
 | npm/package artifact | `published` as npm `reposentinel@0.1.0-beta.2` with `beta` tag; GitHub prerelease `v0.1.0-beta.1` remains available |
 | VS Code diagnostics | `implemented` as optional local adapter; VSIX packaging verified |

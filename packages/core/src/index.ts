@@ -155,7 +155,7 @@ export function redactSensitiveValue(value: string): string {
   if (/\b(?:ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_\-]{8,}/u.test(value)) {
     return value.replace(/\b(ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_\-]{8,}/gu, "$1****[REDACTED]");
   }
-  return value.length > 12 ? `${value.slice(0, 4)}****[REDACTED]` : "[REDACTED]";
+  return "[REDACTED]";
 }
 
 export function fingerprintFor(ruleId: string, path = "", line = 0): string {

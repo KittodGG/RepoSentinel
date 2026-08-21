@@ -51,8 +51,9 @@ describe("core contracts", () => {
 
   it("redacts private keys and high-confidence tokens", () => {
     expect(redactSensitiveValue("-----BEGIN RSA PRIVATE KEY-----\nsecret material")).toBe("[REDACTED PRIVATE KEY]");
-    expect(redactSensitiveValue("ghp_1234567890abcdef")).toBe("ghp_****[REDACTED]");
+    expect(redactSensitiveValue(["ghp_", "1234567890abcdef"].join(""))).toBe("ghp_****[REDACTED]");
     expect(redactSensitiveValue("password")).toBe("[REDACTED]");
+    expect(redactSensitiveValue("long-unclassified-secret-value")).toBe("[REDACTED]");
   });
 
   it("creates stable fingerprints without secret content", () => {

@@ -33,6 +33,17 @@ describe("safe discovery", () => {
     expect(context.ignoredCount).toBeGreaterThanOrEqual(2);
   });
 
+  it("honors repository .gitignore patterns in addition to configured ignores", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-gitignore-"));
+    await mkdir(join(root, "generated"));
+    await writeFile(join(root, ".gitignore"), "generated/\n");
+    await writeFile(join(root, "generated", "output.txt"), "ignored");
+    await writeFile(join(root, "README.md"), "# Demo");
+    const context = await createRepositoryContext(root, "public", config);
+    expect(context.files.some((file) => file.relativePath === "generated/output.txt")).toBe(false);
+    expect(context.ignoredCount).toBeGreaterThanOrEqual(1);
+  });
+
   it("records symlinks without following them", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-symlink-"));
     const outside = await mkdtemp(join(tmpdir(), "reposentinel-outside-"));
@@ -57,6 +68,19 @@ describe("safe discovery", () => {
     expect(envFile?.isTracked).toBe(true);
     expect(context.files.some((file) => file.kind === "directory")).toBe(false);
     expect(context.git?.available).toBe(true);
+  });
+
+  it("enforces aggregate file budgets", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-budget-"));
+    await writeFile(join(root, "a.txt"), "12345");
+    await writeFile(join(root, "b.txt"), "67890");
+    await expect(createRepositoryContext(root, "public", config, { maxFiles: 1 })).rejects.toThrow("file limit");
+    await expect(createRepositoryContext(root, "public", config, { maxTotalBytes: 5 })).rejects.toThrow("aggregate scan size limit");
+  });
+
+  it("rejects unsafe Git base refs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-invalid-ref-"));
+    await expect(readChangedPaths(root, "--output=/tmp/unsafe")).rejects.toThrow("Invalid Git base ref");
   });
 
   it("returns deterministic paths changed from a Git base commit", async () => {

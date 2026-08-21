@@ -56,7 +56,7 @@ describe("rules", () => {
       [file("deploy/id_rsa"), file("src/config.ts")],
       {
         "deploy/id_rsa": "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n-----END OPENSSH PRIVATE KEY-----",
-        "src/config.ts": "const token = 'ghp_1234567890abcdef';"
+        "src/config.ts": `const token = '${["ghp_", "1234567890abcdef"].join("")}';`
       }
     ));
     expect(result.some((finding) => finding.ruleId === "security.private-key")).toBe(true);
@@ -99,6 +99,18 @@ describe("rules", () => {
     expect(complete.map((finding) => finding.ruleId)).not.toContain("community.code-of-conduct");
     expect(complete.map((finding) => finding.ruleId)).not.toContain("git.large-file");
     expect(complete.map((finding) => finding.ruleId)).not.toContain("git.generated-tracked");
+  });
+
+  it("detects secrets in README and reports multiple credential matches safely", () => {
+    const result = runRules(context("public", [file("README.md"), file("docs/deploy.md")], {
+      "README.md": `Use ${["ghp_", "1234567890abcdef"].join("")} and ${["AKIA", "1234567890ABCDEF"].join("")} in this example.`,
+      "docs/deploy.md": "-----BEGIN RSA PRIVATE KEY-----\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n-----END RSA PRIVATE KEY-----"
+    }));
+    const credentialFindings = result.filter((finding) => finding.ruleId === "security.credential-pattern");
+    expect(credentialFindings).toHaveLength(2);
+    expect(result.some((finding) => finding.ruleId === "security.private-key")).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("1234567890abcdef");
+    expect(JSON.stringify(result)).not.toContain("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
   it("reports detached HEAD only when local Git metadata is available", () => {

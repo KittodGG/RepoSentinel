@@ -29,6 +29,10 @@ describe("baseline", () => {
     expect(filterBaselineFindings([finding], new Set(document.fingerprints))).toEqual([]);
   });
 
+  it("rejects critical findings from a baseline", () => {
+    expect(() => createBaselineDocument([{ ...finding, severity: "critical" }])).toThrow("cannot include critical findings");
+  });
+
   it("writes and loads a repository-local baseline", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-baseline-"));
     const path = await writeBaseline(root, ".reposentinel/baseline.json", [finding]);

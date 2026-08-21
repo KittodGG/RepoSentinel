@@ -29,11 +29,27 @@ describe("custom rule registry", () => {
     expect(rule?.run(context(files, { "docs/SECURITY.md": "incomplete" }))[0]?.ruleId).toBe("custom.policy");
   });
 
+  it("reports positive content matches when explicitly requested", () => {
+    const [rule] = loadCustomRules(JSON.stringify([{
+      id: "custom.forbidden-word",
+      severity: "error",
+      path: "docs/*.md",
+      match: "contains",
+      contentIncludes: "TODO",
+      message: "TODO marker remains.",
+      remediation: "Resolve the TODO marker."
+    }]));
+    const files = [{ relativePath: "docs/guide.md", absolutePath: "/fixture/docs/guide.md", kind: "text" as const, sizeBytes: 10, isIgnored: false }];
+    expect(rule?.run(context(files, { "docs/guide.md": "TODO: remove this" }))).toHaveLength(1);
+    expect(rule?.run(context(files, { "docs/guide.md": "complete" }))).toEqual([]);
+  });
+
   it("rejects invalid IDs and duplicate IDs", () => {
     expect(() => loadCustomRules(JSON.stringify([{ id: "policy", severity: "info", path: "SECURITY.md", message: "x", remediation: "y" }]))).toThrow("custom.<name>");
     expect(() => loadCustomRules(JSON.stringify([
       { id: "custom.one", severity: "info", path: "a", message: "x", remediation: "y" },
       { id: "custom.one", severity: "info", path: "b", message: "x", remediation: "y" }
     ]))).toThrow("Duplicate custom rule ID");
+    expect(() => loadCustomRules(JSON.stringify([{ id: "custom.invalid", severity: "warning", path: "README.md", match: "contains", message: "x", remediation: "y" }]))).toThrow("requires contentIncludes");
   });
 });

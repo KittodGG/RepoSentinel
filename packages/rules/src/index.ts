@@ -2,7 +2,6 @@ import { posix } from "node:path";
 import {
   fingerprintFor,
   normalizeFindings,
-  redactSensitiveValue,
   type Finding,
   type RepositoryContext,
   type RuleCategory,
@@ -64,10 +63,6 @@ function firstTextLine(context: RepositoryContext, path: string, predicate: (lin
   if (!source) return undefined;
   const index = source.split(/\r?\n/u).findIndex(predicate);
   return index >= 0 ? index + 1 : undefined;
-}
-
-function isSafeExamplePath(path: string): boolean {
-  return path.startsWith("docs/") || path.startsWith("fixtures/") || /(^|[./_-])(test|spec)([./_-]|$)/iu.test(path) || path.toLowerCase().includes("readme");
 }
 
 function hasAnyFile(context: RepositoryContext, paths: readonly string[]): boolean {
@@ -189,18 +184,19 @@ export const rules: readonly RuleDefinition[] = [
     run(context) {
       const findings: Finding[] = [];
       for (const [path, source] of context.textCache.entries()) {
-        if (isSafeExamplePath(path)) continue;
-        const match = source.match(/-----BEGIN [A-Z ]*PRIVATE KEY-----\s*[A-Za-z0-9+/=]{20,}\s*-----END [A-Z ]*PRIVATE KEY-----/u);
-        if (!match) continue;
-        const lineNumber = firstTextLine(context, path, (line) => line.includes("BEGIN") && line.includes("PRIVATE KEY"));
-        findings.push(finding(this, context, {
-          severity: "critical",
-          path,
-          ...(lineNumber === undefined ? {} : { line: lineNumber }),
-          message: "Private key material detected.",
-          evidence: redactSensitiveValue(match[0].split(/\r?\n/u)[0] ?? "private key"),
-          remediation: "Remove the key from the repository and Git history, rotate related credentials, and verify the ignore rule."
-        }));
+        const privateKeyPattern = /-----BEGIN [A-Z ]*PRIVATE KEY-----\s*[A-Za-z0-9+/=]{20,}\s*-----END [A-Z ]*PRIVATE KEY-----/gu;
+        for (const match of source.matchAll(privateKeyPattern)) {
+          const matchIndex = match.index ?? 0;
+          const line = source.slice(0, matchIndex).split(/\r?\n/u).length;
+          findings.push(finding(this, context, {
+            severity: "critical",
+            path,
+            line,
+            message: "Private key material detected.",
+            evidence: "Private-key material detected; key body redacted.",
+            remediation: "Remove the key from the repository and Git history, rotate related credentials, and verify the ignore rule."
+          }));
+        }
       }
       return findings;
     }
@@ -213,20 +209,23 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
       const findings: Finding[] = [];
-      const pattern = /\b(?:ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_\-]{8,}/u;
+      const pattern = /\b(?:ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_\-]{8,}/gu;
       for (const [path, source] of context.textCache.entries()) {
-        if (isSafeExamplePath(path)) continue;
-        const line = source.split(/\r?\n/u).findIndex((value) => pattern.test(value));
-        if (line < 0) continue;
-        const raw = source.split(/\r?\n/u)[line] ?? "";
-        findings.push(finding(this, context, {
-          severity: "error",
-          path,
-          line: line + 1,
-          message: "A high-confidence credential pattern was detected.",
-          evidence: redactSensitiveValue(raw),
-          remediation: "Revoke and rotate the credential, remove it from the repository, and review Git history."
-        }));
+        for (const [lineIndex, sourceLine] of source.split(/\r?\n/u).entries()) {
+          const matches = [...sourceLine.matchAll(pattern)];
+          for (const match of matches) {
+            const value = match[0] ?? "credential";
+            const prefix = value.match(/^(ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)/u)?.[0] ?? "credential";
+            findings.push(finding(this, context, {
+              severity: "error",
+              path,
+              line: lineIndex + 1,
+              message: "A high-confidence credential pattern was detected.",
+              evidence: `${prefix}****[REDACTED] at column ${(match.index ?? 0) + 1}`,
+              remediation: "Revoke and rotate the credential, remove it from the repository, and review Git history."
+            }));
+          }
+        }
       }
       return findings;
     }

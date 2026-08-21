@@ -53,6 +53,22 @@ describe("reporters", () => {
     expect(output).toContain("| Warning | 1 |");
     expect(output).toContain("### `documentation.quickstart`");
     expect(output).not.toContain("\\\\n");
+    expect(output).toContain("- Network: `disabled`");
+  });
+
+  it("escapes Markdown-controlled evidence and remediation text", () => {
+    const output = renderMarkdownReport({
+      locale: "en",
+      repository: "fixture",
+      profile: "public",
+      findings: [{ ...warning, message: "bad [message] *here*", evidence: "[click](javascript:alert(1)) | raw", remediation: "<script>alert(1)</script>" }],
+      threshold: "error",
+      network: true
+    });
+    expect(output).toContain("bad \\\[message\\] \\\*here\\\*");
+    expect(output).toContain("\\[click\\](javascript:alert(1)) \\\| raw");
+    expect(output).toContain("\\<script\\>alert(1)\\</script\\>");
+    expect(output).toContain("- Network: `enabled (opt-in)`");
   });
 
   it("renders SARIF with stable rules, severity levels, and locations", () => {
@@ -69,6 +85,20 @@ describe("reporters", () => {
     expect(parsed.runs[0]?.results[0]?.level).toBe("warning");
     expect(parsed.runs[0]?.results[0]?.locations[0]?.physicalLocation.artifactLocation.uri).toBe("README.md");
     expect(parsed.runs[0]?.results[0]?.locations[0]?.physicalLocation.region.startLine).toBe(12);
+  });
+
+  it("deduplicates SARIF driver rules and emits rule indexes", () => {
+    const output = renderSarifReport({
+      locale: "en",
+      repository: "fixture",
+      profile: "public",
+      findings: [warning, { ...warning, path: "CONTRIBUTING.md", line: 4 }],
+      threshold: "error"
+    });
+    const parsed = JSON.parse(output) as { runs: Array<{ tool: { driver: { rules: Array<{ id: string }> } }; results: Array<{ ruleId: string; ruleIndex: number }> }> };
+    expect(parsed.runs[0]?.tool.driver.rules).toHaveLength(1);
+    expect(parsed.runs[0]?.tool.driver.rules[0]?.id).toBe("documentation.quickstart");
+    expect(parsed.runs[0]?.results.every((result) => result.ruleIndex === 0)).toBe(true);
   });
 
   it("renders machine JSON without ANSI escape sequences", () => {
@@ -99,7 +129,9 @@ describe("reporters", () => {
     expect(renderTerminalReport({ ...options, filesScanned: 2, ignoredCount: 0, color: false })).toContain("changed since origin/main");
     expect(renderMarkdownReport(options)).toContain("Changed files: `1`");
     expect(renderJsonReport(options)).toContain('"mode": "changed-files"');
+    expect(renderJsonReport(options)).toContain('"network": "disabled"');
     expect(renderSarifReport(options)).toContain('"baseRef": "origin/main"');
+    expect(renderSarifReport(options)).toContain('"network": "disabled"');
   });
 
   it("renders a self-contained escaped HTML report", () => {

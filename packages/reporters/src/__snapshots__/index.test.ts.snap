@@ -6,6 +6,7 @@ exports[`reporters > keeps the Markdown report structure stable 1`] = `
 - Repository: \`fixture\`
 - Profile: \`public\`
 - Locale: \`en\`
+- Network: \`disabled\`
 - Score: \`95 / 100\`
 - Status: \`ready\`
 

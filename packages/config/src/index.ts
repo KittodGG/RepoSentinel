@@ -33,6 +33,16 @@ export type ConfigLoadResult = {
 };
 
 export const defaultIgnore = ["node_modules/**", "dist/**", "coverage/**", ".reposentinel/**"] as const;
+export const recommendedIgnore = [
+  ...defaultIgnore,
+  "build/**",
+  "out/**",
+  ".next/**",
+  "storybook-static/**",
+  "target/**",
+  "venv/**",
+  "__pycache__/**"
+] as const;
 
 export function defaultConfig(profile: RepositoryProfile = "public"): ResolvedConfig {
   return {
@@ -52,6 +62,7 @@ export function defaultConfig(profile: RepositoryProfile = "public"): ResolvedCo
 function resolveConfig(root: string, raw: z.infer<typeof rawConfigSchema>, profileOverride?: RepositoryProfile): ResolvedConfig {
   const profile = profileOverride ?? raw.profile ?? "public";
   const defaults = defaultConfig(profile);
+  const ignoreDefaults = raw.extends === "recommended" ? recommendedIgnore : defaults.ignore;
   return {
     profile,
     ...(raw.baseline ? { baseline: raw.baseline } : {}),
@@ -60,7 +71,7 @@ function resolveConfig(root: string, raw: z.infer<typeof rawConfigSchema>, profi
       formats: (raw.report?.formats ?? ["terminal", "markdown", "json"]) as ReportFormat[],
       ...(raw.report?.output_dir ? { outputDir: raw.report.output_dir } : {})
     },
-    ignore: [...defaults.ignore, ...(raw.ignore ?? [])],
+    ignore: [...ignoreDefaults, ...(raw.ignore ?? [])],
     rules: raw.rules ?? {},
     ciFailOn: raw.ci?.fail_on ?? defaults.ciFailOn,
     security: {

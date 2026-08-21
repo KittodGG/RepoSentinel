@@ -7,6 +7,8 @@ import type { GitMetadata, RepositoryContext, RepositoryFile, RepositoryProfile,
 
 export type DiscoveryOptions = {
   maxFileBytes?: number;
+  maxFiles?: number;
+  maxTotalBytes?: number;
 };
 
 export type DiscoveryResult = {
@@ -22,6 +24,8 @@ export type ChangedFilesResult = {
 };
 
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024;
+const DEFAULT_MAX_FILES = 100_000;
+const DEFAULT_MAX_TOTAL_BYTES = 256 * 1024 * 1024;
 const execFile = promisify(execFileCallback);
 
 async function readTrackedPaths(root: string): Promise<ReadonlySet<string>> {
@@ -58,9 +62,16 @@ function toPosix(value: string): string {
   return value.split("\\").join("/");
 }
 
+function validateGitRef(baseRef: string): void {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/@~^+\-]*$/u.test(baseRef) || baseRef.includes("..") || baseRef.includes("@{") || baseRef.endsWith(".") || baseRef.endsWith(".lock")) {
+    throw new Error("Invalid Git base ref. Use a safe branch, tag, or commit reference.");
+  }
+}
+
 export async function readChangedPaths(root: string, baseRef: string): Promise<ChangedFilesResult> {
+  validateGitRef(baseRef);
   const resolvedRoot = resolve(root);
-  const result = await execFile("git", ["-C", resolvedRoot, "diff", "--name-only", "-z", `${baseRef}...HEAD`], { maxBuffer: 4 * 1024 * 1024 });
+  const result = await execFile("git", ["-C", resolvedRoot, "diff", "--name-only", "-z", `${baseRef}...HEAD`, "--"], { maxBuffer: 4 * 1024 * 1024 });
   const paths = result.stdout.split("\0").filter(Boolean).map(toPosix).sort((left, right) => left.localeCompare(right));
   return { baseRef, paths };
 }
@@ -79,11 +90,19 @@ async function isBinary(path: string, maxBytes: number): Promise<boolean> {
 export async function discoverRepository(root: string, config: ResolvedConfig, options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
   const resolvedRoot = resolve(root);
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
+  const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
+  const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
   const matcher = ignore().add(config.ignore);
+  try {
+    matcher.add(await readFile(join(resolvedRoot, ".gitignore"), "utf8"));
+  } catch {
+    // A repository without .gitignore is valid; configured patterns still apply.
+  }
   const [trackedPaths, git] = await Promise.all([readTrackedPaths(resolvedRoot), readGitMetadata(resolvedRoot)]);
   const files: RepositoryFile[] = [];
   const textCache = new Map<string, string>();
   let ignoredCount = 0;
+  let totalBytes = 0;
 
   async function visit(directory: string): Promise<void> {
     const entries = await readdir(directory, { withFileTypes: true });
@@ -99,6 +118,9 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
 
       const metadata = await lstat(absolutePath);
       if (entry.isSymbolicLink()) {
+        if (files.length >= maxFiles) throw new Error(`Repository exceeds the scan file limit of ${maxFiles}. Use ignore patterns or a smaller target.`);
+        totalBytes += metadata.size;
+        if (totalBytes > maxTotalBytes) throw new Error(`Repository exceeds the aggregate scan size limit of ${maxTotalBytes} bytes. Use ignore patterns or a smaller target.`);
         files.push({ relativePath, absolutePath, kind: "symlink", sizeBytes: metadata.size, isIgnored: false, isTracked: trackedPaths.has(relativePath) });
         continue;
       }
@@ -108,6 +130,9 @@ export async function discoverRepository(root: string, config: ResolvedConfig, o
       }
       if (!entry.isFile()) continue;
 
+      if (files.length >= maxFiles) throw new Error(`Repository exceeds the scan file limit of ${maxFiles}. Use ignore patterns or a smaller target.`);
+      totalBytes += metadata.size;
+      if (totalBytes > maxTotalBytes) throw new Error(`Repository exceeds the aggregate scan size limit of ${maxTotalBytes} bytes. Use ignore patterns or a smaller target.`);
       const binary = metadata.size > maxFileBytes || await isBinary(absolutePath, maxFileBytes);
       const kind = binary ? "binary" : "text";
       files.push({ relativePath, absolutePath, kind, sizeBytes: metadata.size, isIgnored: false, isTracked: trackedPaths.has(relativePath) });

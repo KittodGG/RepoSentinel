@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { workspace, window, commands, languages, Uri, Diagnostic, DiagnosticSeverity, Range, type ExtensionContext, type FileSystemWatcher } from "vscode";
+import { workspace, window, commands, languages, Uri, Diagnostic, DiagnosticSeverity, Range, RelativePattern, type ExtensionContext, type FileSystemWatcher } from "vscode";
 
 type ReportFinding = {
   ruleId: string;
@@ -94,7 +94,10 @@ export function activate(context: ExtensionContext): void {
   context.subscriptions.push(collection);
   context.subscriptions.push(commands.registerCommand("reposentinel.scan", () => scanWorkspace(collection)));
 
-  const watcher: FileSystemWatcher = workspace.createFileSystemWatcher("**/*");
+  const folder = workspace.workspaceFolders?.[0];
+  if (!folder) return;
+  const watcher: FileSystemWatcher = workspace.createFileSystemWatcher(new RelativePattern(folder, "**/*.{md,mdx,yml,yaml,json,js,ts,tsx,jsx}"));
+  const metadataWatcher: FileSystemWatcher = workspace.createFileSystemWatcher(new RelativePattern(folder, "{.gitignore,.reposentinel.yml,pnpm-lock.yaml}"));
   let timer: ReturnType<typeof setTimeout> | undefined;
   const schedule = (): void => {
     if (timer) clearTimeout(timer);
@@ -103,7 +106,10 @@ export function activate(context: ExtensionContext): void {
   watcher.onDidCreate(schedule, undefined, context.subscriptions);
   watcher.onDidChange(schedule, undefined, context.subscriptions);
   watcher.onDidDelete(schedule, undefined, context.subscriptions);
-  context.subscriptions.push(watcher);
+  context.subscriptions.push(watcher, metadataWatcher);
+  metadataWatcher.onDidCreate(schedule, undefined, context.subscriptions);
+  metadataWatcher.onDidChange(schedule, undefined, context.subscriptions);
+  metadataWatcher.onDidDelete(schedule, undefined, context.subscriptions);
 }
 
 export function deactivate(): void {}
