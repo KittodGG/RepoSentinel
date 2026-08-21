@@ -90,6 +90,38 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Package hygiene
 
+<a id="package.manifest-exports"></a>
+### `package.manifest-exports`
+
+- **Severity:** warning
+- **Detects:** A publishable `package.json` without an `exports` map or executable `main`/`bin` entrypoint.
+- **Why it matters:** Consumers and registries need a stable entrypoint instead of relying on implicit source layout.
+- **Remediation:** Add an explicit exports map or documented `main`/`bin` entrypoint.
+
+<a id="package.manifest-files"></a>
+### `package.manifest-files`
+
+- **Severity:** warning
+- **Detects:** A publishable package whose `files` allowlist does not include `dist`.
+- **Why it matters:** Explicit artifact boundaries reduce accidental source, test, and local-file publication.
+- **Remediation:** Include `dist` in the package files allowlist and review the packed artifact.
+
+<a id="package.manifest-engines"></a>
+### `package.manifest-engines`
+
+- **Severity:** warning
+- **Detects:** A publishable workspace package whose `engines.node` range differs from the workspace root.
+- **Why it matters:** Consistent runtime requirements prevent platform-specific installation and execution surprises.
+- **Remediation:** Align `engines.node` with the workspace root or document the intentional exception.
+
+<a id="package.lockfile-sync"></a>
+### `package.lockfile-sync`
+
+- **Severity:** warning
+- **Detects:** A declared package manager without its lockfile, or a pnpm workspace package missing from lockfile importers.
+- **Why it matters:** Frozen CI installs depend on manifests and lockfile importers describing the same workspace.
+- **Remediation:** Regenerate the lockfile with the declared package manager and commit it with the manifest changes.
+
 <a id="package.lockfile-single"></a>
 ### `package.lockfile-single`
 
@@ -177,6 +209,22 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Remediation:** Add a Demo or Preview section near the top of the README.
 
 ## CI
+
+<a id="ci.action-sha-pinned"></a>
+### `ci.action-sha-pinned`
+
+- **Severity:** warning
+- **Detects:** Third-party GitHub Actions referenced by mutable tags or branches instead of full commit SHAs.
+- **Why it matters:** Immutable references reduce supply-chain drift and make workflow changes auditable.
+- **Remediation:** Pin each third-party action to a verified 40-character commit SHA and retain the release in a comment.
+
+<a id="ci.pull-request-target-safety"></a>
+### `ci.pull-request-target-safety`
+
+- **Severity:** critical
+- **Detects:** A `pull_request_target` workflow that checks out pull-request code in a privileged context.
+- **Why it matters:** Untrusted pull-request code must not run with the target repository's elevated token or secrets.
+- **Remediation:** Use `pull_request`, or separate trusted metadata handling from untrusted code execution.
 
 <a id="ci.workflow-permissions"></a>
 ### `ci.workflow-permissions`

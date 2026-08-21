@@ -14,9 +14,9 @@
 
 `.github/workflows/quality.yml` berjalan pada push dan Pull Request ke `main`. Workflow meng-install dependency dengan `pnpm install --frozen-lockfile`, menjalankan typecheck dan test, membangun seluruh workspace package, lalu menjalankan local JSON smoke scan. Smoke report wajib menggunakan `reposentinel.report/v1` dan locale English.
 
-The workflow declares `permissions: contents: read`, uses a concurrency group to cancel superseded Pull Request runs, and has a bounded timeout. It does not send repository source to an external service.
+The workflow declares `permissions: contents: read`, uses a concurrency group to cancel superseded Pull Request runs, and has a bounded timeout. It does not send repository source to an external service. Third-party Actions are pinned to full commit SHAs, and the repository's rule pack flags mutable references for review.
 
-Workflow mendeklarasikan `permissions: contents: read`, menggunakan concurrency group untuk membatalkan Pull Request run yang sudah tidak relevan, dan memiliki timeout terbatas. Workflow tidak mengirim source repository ke external service.
+Workflow mendeklarasikan `permissions: contents: read`, menggunakan concurrency group untuk membatalkan Pull Request run yang sudah tidak relevan, dan memiliki timeout terbatas. Workflow tidak mengirim source repository ke external service. Third-party Action dipin ke full commit SHA, dan rule pack akan menandai reference yang mutable untuk direview.
 
 ## Composite Action / Composite Action
 
@@ -97,7 +97,9 @@ A production or stable change is not ready to merge until the following conditio
 | Smoke report / Smoke report | JSON emits `reposentinel.report/v1`; SARIF emits version `2.1.0`. / JSON dan SARIF memiliki schema yang benar. |
 | Action syntax / Syntax Action | `action.yml` has valid inputs, composite steps, and no secret-dependent behavior. / Input dan composite step valid tanpa ketergantungan secret. |
 | Permissions / Permission | Quality workflow uses least privilege, with read-only contents by default. / Workflow menggunakan least privilege. |
-| Packaging / Packaging | Clean artifact contains only intended runtime files and dependencies. / Artifact bersih berisi file dan dependency runtime yang dimaksud. |
+| Action pinning / Pinning Action | Third-party Actions use verified full commit SHAs; privileged `pull_request_target` workflows must not check out PR code. / Action dipin dan workflow privileged tidak checkout code PR. |
+| Lockfile consistency / Konsistensi lockfile | Declared package manager, lockfile, and workspace importers agree. / Package manager, lockfile, dan workspace importer konsisten. |
+| Packaging / Packaging | Clean artifact contains only intended runtime files and dependencies, with exports, `files`, and Node.js engine metadata verified. / Artifact bersih memiliki exports, `files`, dan runtime Node.js yang benar. |
 | Registry smoke / Registry smoke | Fresh install from the intended registry resolves and executes the published stable version. / Fresh install dari registry berhasil menjalankan stable version. |
 | Documentation / Dokumentasi | README, Security, Contributing, Code of Conduct, and templates match the implementation. / Dokumentasi governance sesuai implementasi. |
 

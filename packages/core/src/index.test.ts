@@ -76,6 +76,20 @@ describe("core contracts", () => {
     expect(redactSensitiveValue("long-unclassified-secret-value")).toBe(
       "[REDACTED]",
     );
+    const expanded = [
+      `sk_live_${"a".repeat(24)}`,
+      `rk_live_${"b".repeat(24)}`,
+      `AIza${"c".repeat(24)}`,
+      `sk-proj-${"d".repeat(24)}`,
+      `sk-${"e".repeat(24)}`,
+      `npm_${"f".repeat(24)}`,
+      `eyJ${"g".repeat(12)}.${"h".repeat(12)}.${"i".repeat(12)}`,
+    ];
+    for (const value of expanded) {
+      const redacted = redactSensitiveValue(value);
+      expect(redacted).toContain("****[REDACTED]");
+      expect(redacted).not.toContain(value.slice(3));
+    }
   });
 
   it("creates stable fingerprints without secret content", () => {

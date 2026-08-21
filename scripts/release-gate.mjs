@@ -39,6 +39,27 @@ try {
     throw new Error("Published package must not be private");
   if (!installedManifest.name || !installedManifest.version)
     throw new Error("Published package metadata is incomplete");
+  if (
+    !Array.isArray(installedManifest.files) ||
+    !installedManifest.files.some(
+      (entry) => entry === "dist" || entry.startsWith("dist/"),
+    )
+  )
+    throw new Error("Published package must allowlist dist output");
+  if (
+    !installedManifest.exports &&
+    !installedManifest.main &&
+    !installedManifest.bin
+  )
+    throw new Error("Published package must expose an entrypoint");
+  if (installedManifest.engines?.node !== ">=24")
+    throw new Error("Published package must declare Node.js >=24");
+  if (
+    Object.keys(installedManifest.dependencies ?? {}).some((name) =>
+      name.startsWith("@reposentinel/"),
+    )
+  )
+    throw new Error("Published package must not depend on workspace packages");
   const bundle = join(installedPackage, "dist", "index.js");
   const version = await execFileAsync(process.execPath, [bundle, "--version"], {
     cwd: installedPackage,
