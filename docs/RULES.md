@@ -84,9 +84,9 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 ### `security.credential-pattern`
 
 - **Severity:** error
-- **Detects:** High-confidence token prefixes for GitHub, Slack, and AWS credential families.
+- **Detects:** High-confidence token prefixes for GitHub (`ghp_`, `github_pat_`), Slack (`xoxb-`, `xoxp-`), AWS (`AKIA`, `ASIA`), Stripe (`sk_live_`, `rk_live_`), Google API (`AIza`), OpenAI (`sk-proj-`, `sk-`), npm (`npm_`), and JWT-like three-segment values beginning with `eyJ`. Short lookalikes below the minimum body length are ignored.
 - **Why it matters:** Recognized credentials should be revoked and rotated immediately.
-- **Remediation:** Revoke and rotate the credential, remove it from the repository, and review Git history. This detector is intentionally not a complete secret scanner.
+- **Remediation:** Revoke and rotate the credential, remove it from the repository, and review Git history. This detector is intentionally not a complete secret scanner; it does not replace dedicated secret-management or enterprise scanning tools.
 
 ## Package hygiene
 

@@ -86,6 +86,9 @@ describe("network link checks", () => {
     const findings = await runNetworkLinkChecks(context(source), {
       enabled: true,
       maxLinks: 2,
+      resolveHostname: vi
+        .fn()
+        .mockResolvedValue([{ address: "93.184.216.34", family: 4 }]),
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(
