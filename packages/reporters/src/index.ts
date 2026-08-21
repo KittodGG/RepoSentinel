@@ -62,14 +62,6 @@ function localizeFinding(finding: Finding, locale: Locale): Finding {
   };
 }
 
-function colorize(
-  enabled: boolean,
-  color: (value: string) => string,
-  value: string,
-): string {
-  return enabled ? color(value) : value;
-}
-
 function code(value: string): string {
   return `\`${value.replaceAll("`", "\\`")}\``;
 }
@@ -101,8 +93,80 @@ export type TerminalReportOptions = {
   network?: boolean;
   scanBudget?: ScanBudget | undefined;
   findingsTruncated?: boolean;
+  /** Drawing width; clamped to 56..100. Defaults to 80 so output stays stable. */
+  width?: number | undefined;
   color?: boolean;
 };
+
+/**
+ * Matches an ANSI SGR sequence. Built from the escape code point rather than a
+ * literal control character so the source stays copy-safe.
+ */
+const ESCAPE = String.fromCharCode(27);
+const ANSI = new RegExp(`${ESCAPE}${"\\["}[0-9;]*m`, "gu");
+
+/** Visible width of a string, ignoring colour escapes. */
+function visibleWidth(value: string): number {
+  return value.replace(ANSI, "").length;
+}
+
+function padVisible(value: string, width: number): string {
+  const pad = Math.max(0, width - visibleWidth(value));
+  return value + " ".repeat(pad);
+}
+
+/**
+ * Wraps text to a column budget without breaking words. Long unbreakable
+ * tokens — paths, redacted matches — are emitted on their own line rather than
+ * being split, so a value stays selectable in one go.
+ */
+function wrap(value: string, width: number): string[] {
+  if (width <= 0) return [value];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of value.split(/\s+/u).filter(Boolean)) {
+    if (current.length === 0) {
+      current = word;
+      continue;
+    }
+    if (current.length + 1 + word.length <= width) {
+      current = `${current} ${word}`;
+      continue;
+    }
+    lines.push(current);
+    current = word;
+  }
+  if (current.length > 0) lines.push(current);
+  return lines.length > 0 ? lines : [""];
+}
+
+const SEVERITY_ORDER = ["critical", "error", "warning", "info"] as const;
+
+const SEVERITY_MARK: Record<Finding["severity"], string> = {
+  critical: "✕",
+  error: "✕",
+  warning: "!",
+  info: "·",
+};
+
+/**
+ * Resolves the drawing width. Terminals narrower than the floor still render;
+ * they simply wrap more. The value is a parameter rather than a direct
+ * `process.stdout` read so snapshots stay stable regardless of the terminal
+ * running the suite.
+ */
+function resolveWidth(requested: number | undefined): number {
+  const raw = requested ?? 80;
+  return Math.max(56, Math.min(100, Math.trunc(raw)));
+}
+
+function gauge(score: number, cells: number): string {
+  const filled = Math.max(
+    0,
+    Math.min(cells, Math.round((score / 100) * cells)),
+  );
+  return "▰".repeat(filled) + "▱".repeat(cells - filled);
+}
 
 export function renderTerminalReport(options: TerminalReportOptions): string {
   const {
@@ -118,110 +182,170 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
     network = false,
     scanBudget,
     findingsTruncated = false,
+    width: requestedWidth,
     color = true,
   } = options;
+
   const colors = createColors(color);
   const { t } = createTranslator(locale);
   const summary = summarizeFindings(findings, threshold);
-  const scoreColor =
-    summary.score >= 90
-      ? colors.green
-      : summary.score >= 75
-        ? colors.cyan
-        : colors.yellow;
-  const status = t(statusMessageKey(summary.status));
+  const width = resolveWidth(requestedWidth);
+  const inner = width - 6; // two-space gutter plus box borders
+  const notApplicable = summary.status === "not-applicable";
+
+  const accent =
+    notApplicable || summary.score < 50
+      ? colors.red
+      : summary.score < 75
+        ? colors.yellow
+        : summary.score < 90
+          ? colors.cyan
+          : colors.green;
+
+  const out: string[] = [];
+  const push = (line = "") => out.push(line);
+
+  // ---- masthead ------------------------------------------------------------
+  push();
+  push(`  ${colors.cyan("◈")} ${colors.bold(colors.white("RepoSentinel"))}`);
+  push(`    ${colors.dim(t("brand.tagline"))}`);
+  push();
+
+  const context = [
+    repository,
+    profile,
+    `network ${network ? "on" : "off"}`,
+    `locale ${locale}`,
+  ];
+  push(`    ${colors.dim(context.join("  ·  "))}`);
+  push();
+
+  // ---- score panel ---------------------------------------------------------
+  const status = t(statusMessageKey(summary.status)).toUpperCase();
+  const top = `╭${"─".repeat(inner)}╮`;
+  const bottom = `╰${"─".repeat(inner)}╯`;
+  const row = (content: string): string =>
+    `  ${colors.dim("│")} ${padVisible(content, inner - 1)}${colors.dim("│")}`;
+
+  push(`  ${colors.dim(top)}`);
+  if (notApplicable) {
+    push(row(`${accent(colors.bold("n/a"))}  ${colors.bold(accent(status))}`));
+  } else {
+    const bar = gauge(summary.score, Math.max(10, inner - 26));
+    push(
+      row(
+        `${accent(colors.bold(`${summary.score}`))}${colors.dim("/100")}  ${accent(bar)}  ${colors.bold(accent(status))}`,
+      ),
+    );
+  }
+  const facts = [
+    `${filesScanned} ${t("scan.files").toLocaleLowerCase(locale)}`,
+    `${ignoredCount} ${t("scan.ignored")
+      .toLocaleLowerCase(locale)
+      .replace(/^files?\s+/u, "")}`,
+    `${t("scan.failsOn")} ${threshold}`,
+  ];
+  push(row(colors.dim(facts.join(" · "))));
+  push(`  ${colors.dim(bottom)}`);
+  push();
+
+  // ---- counts --------------------------------------------------------------
+  const countColor: Record<(typeof SEVERITY_ORDER)[number], typeof colors.red> =
+    {
+      critical: colors.red,
+      error: colors.red,
+      warning: colors.yellow,
+      info: colors.cyan,
+    };
+  const counts = SEVERITY_ORDER.map((severity) => {
+    const value = summary.counts[severity];
+    const label = `${value} ${t(`finding.${severity}` as const)}`;
+    return value === 0 ? colors.dim(label) : countColor[severity](label);
+  });
+  push(`    ${counts.join("   ")}`);
+
+  // ---- scope notes ---------------------------------------------------------
+  const notes: string[] = [];
+  if (changedSince)
+    notes.push(
+      `${t("scan.changedScope")} ${changedSince} · ${changedFiles.length}`,
+    );
+  if (scanBudget?.truncated) notes.push(t("scan.boundedScan"));
+  if (findingsTruncated) notes.push(t("scan.truncatedOutput"));
+  if (notes.length > 0) {
+    push();
+    for (const note of notes)
+      push(`    ${colors.yellow("▲")} ${colors.dim(note)}`);
+  }
+  push();
+
+  // ---- findings, grouped by severity ---------------------------------------
+  if (findings.length === 0) {
+    push(`    ${colors.green("✓")} ${t("scan.noFindings")}`);
+  } else {
+    const localized = findings.map((finding) =>
+      localizeFinding(finding, locale),
+    );
+    for (const severity of SEVERITY_ORDER) {
+      const group = localized.filter(
+        (finding) => finding.severity === severity,
+      );
+      if (group.length === 0) continue;
+
+      const heading = t(`finding.${severity}` as const).toUpperCase();
+      const rule = "─".repeat(Math.max(0, width - heading.length - 5));
+      push();
+      push(`  ${countColor[severity](heading)} ${colors.dim(rule)}`);
+      push();
+
+      for (const finding of group) {
+        const location = finding.path
+          ? `${finding.path}${finding.line ? `:${finding.line}` : ""}`
+          : "repository";
+        const idWidth = Math.max(0, width - 7 - location.length - 2);
+        push(
+          `    ${countColor[severity](SEVERITY_MARK[severity])}  ${padVisible(colors.bold(finding.ruleId), idWidth)} ${colors.dim(location)}`,
+        );
+        for (const line of wrap(finding.message, width - 7))
+          push(`       ${line}`);
+
+        const detailLabel = Math.max(
+          visibleWidth(t("finding.evidenceLabel")),
+          visibleWidth(t("finding.fixLabel")),
+        );
+        const detail = (label: string, value: string): void => {
+          const body = wrap(value, width - 10 - detailLabel);
+          body.forEach((line, index) => {
+            const prefix =
+              index === 0
+                ? colors.dim(padVisible(label, detailLabel))
+                : " ".repeat(detailLabel);
+            push(`       ${prefix}  ${index === 0 ? line : colors.dim(line)}`);
+          });
+        };
+        if (finding.evidence)
+          detail(t("finding.evidenceLabel"), colors.dim(finding.evidence));
+        detail(t("finding.fixLabel"), colors.dim(finding.remediation));
+        push();
+      }
+    }
+  }
+
+  // ---- footer --------------------------------------------------------------
   const resultLabel =
     summary.exitCode === 1
       ? t("result.failed")
       : summary.counts.warning > 0
         ? t("result.passedWithWarnings")
         : t("result.passed");
-  const line = colors.dim(
-    "──────────────────────────────────────────────────────────────",
+  const scoreText = notApplicable ? "n/a" : `${summary.score}/100`;
+  push(`  ${colors.dim("─".repeat(width - 4))}`);
+  push(
+    `    ${accent(scoreText)}${colors.dim(` · ${t(statusMessageKey(summary.status))} · ${resultLabel} · ${t("scan.exitCode")} ${summary.exitCode}`)}`,
   );
-  const boxWidth = 63;
-  const boxTitle = "╭─ health snapshot ";
-  const boxTop = `${boxTitle}${"─".repeat(boxWidth - boxTitle.length - 1)}╮`;
-  const boxBottom = `╰${"─".repeat(boxWidth - 2)}╯`;
-  const boxRow = (value: string): string =>
-    `${`│ ${value}`.padEnd(boxWidth - 1, " ")}│`;
-  const output = [
-    `${colors.cyan("◈")} ${colors.bold(colors.white("RepoSentinel"))}`,
-    colors.dim(`  ${t("brand.tagline")}`),
-    "",
-    `${t("scan.repository")} : ${repository}`,
-    `${t("scan.profile")}    : ${profile}`,
-    `${t("scan.mode")}       : local · network ${network ? "on" : "off"} · locale ${locale}`,
-    ...(changedSince
-      ? [
-          `Scope      : changed since ${changedSince} · ${changedFiles.length} changed file(s)`,
-        ]
-      : []),
-    ...(scanBudget?.truncated
-      ? [
-          `Scan       : bounded at ${scanBudget.maxFiles} files / ${scanBudget.maxTotalBytes} bytes; some files were not read`,
-        ]
-      : []),
-    ...(findingsTruncated
-      ? ["Output     : findings were truncated by the report budget"]
-      : []),
-    "",
-    colors.blue(boxTop),
-    scoreColor(boxRow(`${scoreLabel(summary)}   ${status.toUpperCase()}`)),
-    colors.dim(
-      boxRow(
-        `${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`,
-      ),
-    ),
-    colors.blue(boxBottom),
-    "",
-    `${t("scan.findings")}  ${line}`,
-    `${colors.red("CRITICAL")} ${summary.counts.critical}   ${colors.red("ERROR")} ${summary.counts.error}   ${colors.yellow("WARNING")} ${summary.counts.warning}   ${colors.cyan("INFO")} ${summary.counts.info}`,
-  ];
+  push();
 
-  if (findings.length === 0) {
-    output.push(colors.green(`✓ ${t("scan.noFindings")}`));
-  } else {
-    for (const raw of findings) {
-      const finding = localizeFinding(raw, locale);
-      const marker =
-        finding.severity === "critical" || finding.severity === "error"
-          ? "×"
-          : finding.severity === "warning"
-            ? "!"
-            : "◇";
-      const markerColor =
-        finding.severity === "critical" || finding.severity === "error"
-          ? colors.red
-          : finding.severity === "warning"
-            ? colors.yellow
-            : colors.cyan;
-      const location = finding.path
-        ? `${finding.path}${finding.line ? `:${finding.line}` : ""}`
-        : "repository";
-      output.push(
-        "",
-        `${colorize(color, markerColor, marker)}  ${finding.ruleId}  ${location}  ${finding.severity}`,
-      );
-      output.push(`   ${finding.message}`);
-      if (finding.evidence)
-        output.push(
-          `   ${colors.dim(`${t("finding.evidenceLabel")}: ${finding.evidence}`)}`,
-        );
-      output.push(
-        `   ${colors.dim(`${t("finding.fixLabel")}: ${finding.remediation}`)}`,
-      );
-    }
-  }
-
-  output.push(
-    "",
-    `${t("scan.score")}  : ${scoreLabel(summary)}`,
-    `${t("scan.status")} : ${status}`,
-    `${t("scan.result")} : ${resultLabel}`,
-    `Exit code : ${summary.exitCode}`,
-  );
-  return `${output.join("\n")}\n`;
+  return `${out.join("\n")}\n`;
 }
 
 export function renderMarkdownReport(

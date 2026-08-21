@@ -4,6 +4,7 @@ import type {
   ResolvedConfig,
 } from "@reposentinel/core";
 import {
+  hasRuleTextTranslation,
   ruleTextCatalog,
   supportedLocales,
   translateRuleText,
@@ -211,16 +212,6 @@ function detachedHeadContext(): RepositoryContext {
   return base;
 }
 
-/**
- * Findings whose text interpolates a value cannot be keyed by their English
- * source, because the key differs per repository. They intentionally stay in
- * English until rule text moves to parameterised message keys.
- */
-const KNOWN_UNTRANSLATED = [
-  /^Set engines\.node to .+ or document why/u,
-  /^The declared package manager is missing /u,
-];
-
 describe("rule text localization", () => {
   const prose = new Set<string>();
   const evidence = new Set<string>();
@@ -241,12 +232,20 @@ describe("rule text localization", () => {
     if (locale === "en") continue;
 
     it(`translates every message and remediation into ${locale}`, () => {
-      const catalog = ruleTextCatalog(locale);
       const missing = [...prose]
-        .filter((text) => !(text in catalog))
-        .filter((text) => !KNOWN_UNTRANSLATED.some((p) => p.test(text)))
+        .filter((text) => !hasRuleTextTranslation(locale, text))
         .sort();
       expect(missing).toEqual([]);
+    });
+
+    it(`leaves no English prose in a ${locale} report`, () => {
+      // Parameterised text is covered by pattern substitution, so nothing a
+      // rule emits may come back unchanged unless it is genuinely identical in
+      // both languages.
+      const unchanged = [...prose]
+        .filter((text) => translateRuleText(locale, text) === text)
+        .sort();
+      expect(unchanged).toEqual([]);
     });
 
     it(`never renders a raw catalog key in ${locale}`, () => {

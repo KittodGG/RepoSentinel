@@ -8,3 +8,7 @@ Every secret below is fabricated and has never been valid anywhere.
 ```bash
 npm install corpus-canary
 ```
+
+Every file here must stay tracked. The planted secrets are the detection
+floor for the external corpus gate; if one stops being committed the gate
+loses its positive control. `.gitignore` carries a negation for this tree.

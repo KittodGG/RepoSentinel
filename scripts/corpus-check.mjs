@@ -96,8 +96,14 @@ async function ensureCheckout(repository, cache) {
   return checkout;
 }
 
-async function scan(repository, checkout, limits) {
-  const reportPath = join(checkout, ".reposentinel-corpus-report.json");
+async function scan(repository, checkout, limits, cache) {
+  // Reports go to the cache, never into the checkout. A canary lives inside the
+  // repository, so writing beside it would leave build output in version
+  // control.
+  const reportPath = join(
+    cache,
+    `${repository.name.replaceAll("/", "__")}.report.json`,
+  );
   await rm(reportPath, { force: true });
   const started = performance.now();
   let exitCode = 0;
@@ -231,7 +237,12 @@ for (const repository of manifest.repositories) {
   process.stdout.write(`corpus ${repository.name}@${label} ... `);
   try {
     const checkout = await ensureCheckout(repository, options.cache);
-    const result = await scan(repository, checkout, manifest.limits);
+    const result = await scan(
+      repository,
+      checkout,
+      manifest.limits,
+      options.cache,
+    );
     results.push(result);
     console.log(result.failures.length === 0 ? "passed" : "failed");
   } catch (error) {

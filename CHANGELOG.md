@@ -4,8 +4,14 @@ All notable changes to RepoSentinel are documented here. Version `1.0.0` is the 
 
 ## Unreleased — post-1.0.0 hardening
 
+### Terminal layout
+
+- Rebuilt the terminal report: findings are grouped by severity under their own rule, long prose wraps to the layout width instead of running off the line, the score appears once as a gauge instead of twice as plain text, and every frame — panel, severity rules, footer — shares one width. The panel and the findings rule previously disagreed by nine characters.
+- The layout adapts to the terminal width when stdout is a TTY, and holds a fixed 80 columns for pipes and `--output` so a captured report does not depend on the terminal that produced it.
+
 ### Localization
 
+- Closed the last two untranslated strings with pattern-based substitution for text that interpolates a repository value, so an Indonesian report now contains no English prose at all. Severity names stay English by design — they are the tokens `--fail-on` and the JSON `severity` field accept.
 - Localized finding messages, remediations, and prose evidence into Indonesian for the terminal, Markdown, and HTML reports. JSON and SARIF keep the English source text, so machine-readable findings stay byte-identical across locales.
 - Localized the `Evidence` and `Fix` labels and added a `not applicable` status string.
 - Added a catalog-completeness suite that drives the rule pack over fixtures and fails the build when an emitted message or remediation has no translation, so editing English prose cannot silently orphan its Indonesian counterpart.
@@ -15,6 +21,8 @@ All notable changes to RepoSentinel are documented here. Version `1.0.0` is the 
 - Recognized per-file test conventions — `a.test.ts`, `a.spec.ts`, `a_test.go`, `test_a.py`, `__tests__/`, `spec/`, `e2e/` — as fixture paths. Directory names alone missed the dominant convention in every major ecosystem and reported synthetic fixture credentials at production severity.
 - Applied the fixture-path downgrade before the credential family, so a connection string and a token in the same test file no longer land at different severities.
 - Added a positive control to the corpus gate: a synthetic canary repository with planted credentials and asserted minimum detection counts. Every previous corpus assertion was an upper bound, so a broken detector would have made the corpus look greener rather than failing it.
+- Stopped the corpus runner writing its report inside the scanned checkout. For the local canary that is the repository itself, so the artifact was landing in version control.
+- Added a `.gitignore` negation for the canary tree. Its `.env` fixture matched the repository's own ignore rules, so the planted secret never reached a clone and the gate lost part of its detection floor.
 - Fixed a Windows path defect in the corpus runner, which derived the repository root from `URL.pathname` and produced a `/C:/...` shape.
 
 - Added a pinned external-repository corpus gate with reproducible commits, bounded scan time, report-size limits, finding-volume limits, and a blocking-security policy that keeps test fixtures visible without treating them as production credentials.

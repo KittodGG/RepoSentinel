@@ -35,16 +35,67 @@ describe("reporters", () => {
     expect(output).toContain("kesiapan repository, tanpa kebisingan");
     expect(output).toContain("SIAP");
     expect(output).toContain("documentation.quickstart");
-    const lines = output.split("\n");
-    const top = lines.find((line) => line.startsWith("╭─ health snapshot"));
-    const row = lines.find((line) => line.startsWith("│"));
-    const bottom = lines.find((line) => line.startsWith("╰"));
-    expect(top).toBeDefined();
-    expect(row).toBeDefined();
-    expect(bottom).toBeDefined();
-    expect(top?.length).toBe(row?.length);
-    expect(row?.length).toBe(bottom?.length);
+    // Rule prose and the detail labels render in the target language.
+    expect(output).toContain("README tidak memuat perintah Quick Start");
+    expect(output).toContain("Perbaikan");
     expect(output).not.toContain("\\u001b[");
+
+    const lines = output.split("\n");
+    const structural = lines.filter((line) =>
+      /^ {2}[╭│╰]|^ {2}[A-Z]+ ─|^ {2}─/u.test(line),
+    );
+    expect(structural.length).toBeGreaterThan(4);
+    // Every framing line shares one width, so the panel, the severity rules,
+    // and the footer stay flush instead of drifting apart by a character.
+    expect(new Set(structural.map((line) => line.length)).size).toBe(1);
+  });
+
+  it("adapts the layout width and keeps every frame flush", () => {
+    for (const width of [56, 72, 100]) {
+      const output = renderTerminalReport({
+        locale: "en",
+        repository: "fixture",
+        profile: "public",
+        filesScanned: 4,
+        ignoredCount: 1,
+        findings: [warning],
+        threshold: "error",
+        color: false,
+        width,
+      });
+      const structural = output
+        .split("\n")
+        .filter((line) => /^ {2}[╭│╰]|^ {2}[A-Z]+ ─|^ {2}─/u.test(line));
+      const widths = new Set(structural.map((line) => line.length));
+      expect(widths).toEqual(new Set([width - 2]));
+      // Nothing may overflow the requested width.
+      for (const line of output.split("\n"))
+        expect(line.length).toBeLessThanOrEqual(width);
+    }
+  });
+
+  it("shows no score for a target that cannot be assessed", () => {
+    const output = renderTerminalReport({
+      locale: "en",
+      repository: "fixture",
+      profile: "public",
+      filesScanned: 0,
+      ignoredCount: 0,
+      findings: [
+        {
+          ruleId: "scan.empty-target",
+          category: "ci",
+          severity: "info",
+          message: "No scannable files were found.",
+          remediation: "Point the scan at a repository with tracked files.",
+        },
+      ],
+      threshold: "error",
+      color: false,
+    });
+    expect(output).toContain("n/a");
+    expect(output).toContain("NOT APPLICABLE");
+    expect(output).not.toMatch(/\d+\/100/u);
   });
 
   it("renders Markdown with a summary table and finding section", () => {

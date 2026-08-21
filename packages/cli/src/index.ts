@@ -101,6 +101,16 @@ function colorize(
   return enabled ? color(value) : value;
 }
 
+/**
+ * Terminal width for the report layout. Only an interactive stdout supplies it;
+ * piped and file output keep the reporter default so a captured report is
+ * identical regardless of the terminal that produced it.
+ */
+function resolveWidth(writingToFile: boolean): number | undefined {
+  if (writingToFile || !process.stdout.isTTY) return undefined;
+  return process.stdout.columns;
+}
+
 function resolveColor(
   requested: boolean | undefined,
   writingToFile = false,
@@ -335,6 +345,7 @@ async function runCheck(
                   filesScanned: scan.context.files.length,
                   ignoredCount: scan.context.ignoredCount,
                   color: resolveColor(options.color, Boolean(options.output)),
+                  width: resolveWidth(Boolean(options.output)),
                 });
     if (options.output) {
       const reportPath = resolve(options.output);

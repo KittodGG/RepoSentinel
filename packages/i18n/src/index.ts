@@ -52,6 +52,11 @@ export type MessageKey =
   | "finding.info"
   | "finding.evidenceLabel"
   | "finding.fixLabel"
+  | "scan.failsOn"
+  | "scan.exitCode"
+  | "scan.boundedScan"
+  | "scan.truncatedOutput"
+  | "scan.changedScope"
   | "error.invalidLocale"
   | "error.invalidPath";
 
@@ -114,6 +119,11 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.info": "info",
     "finding.evidenceLabel": "Evidence",
     "finding.fixLabel": "Fix",
+    "scan.failsOn": "fails on",
+    "scan.exitCode": "exit",
+    "scan.boundedScan": "bounded scan; some files were not read",
+    "scan.truncatedOutput": "output truncated by the report budget",
+    "scan.changedScope": "changed since",
     "error.invalidLocale": ({ locale }) =>
       `Unsupported locale "${locale}". Use: en, id.`,
     "error.invalidPath": ({ path }) => `Target path does not exist: ${path}`,
@@ -170,6 +180,11 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.info": "info",
     "finding.evidenceLabel": "Bukti",
     "finding.fixLabel": "Perbaikan",
+    "scan.failsOn": "gagal pada",
+    "scan.exitCode": "exit",
+    "scan.boundedScan": "scan dibatasi; sebagian file tidak dibaca",
+    "scan.truncatedOutput": "output dipotong oleh batas report",
+    "scan.changedScope": "perubahan sejak",
     "error.invalidLocale": ({ locale }) =>
       `Locale "${locale}" tidak didukung. Gunakan: en, id.`,
     "error.invalidPath": ({ path }) => `Path target tidak ditemukan: ${path}`,
@@ -219,4 +234,8 @@ export function getCatalog(locale: Locale): Readonly<Catalog> {
   return catalogs[locale];
 }
 
-export { ruleTextCatalog, translateRuleText } from "./rule-text.js";
+export {
+  hasRuleTextTranslation,
+  ruleTextCatalog,
+  translateRuleText,
+} from "./rule-text.js";

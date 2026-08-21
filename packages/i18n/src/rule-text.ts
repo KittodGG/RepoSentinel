@@ -171,11 +171,59 @@ const catalogs: Record<Locale, Record<string, string>> = {
 };
 
 /**
- * Translates rule finding text for display. Unknown strings fall back to the
- * English source so a missing entry degrades to readable output.
+ * Findings that interpolate a repository value cannot be keyed by their exact
+ * English text, because the key changes per repository. They are matched by
+ * pattern instead, and the captured values are substituted into the
+ * translation — keeping rules free of message-key plumbing while still
+ * rendering fully in the target language.
+ */
+type PatternTranslation = { readonly match: RegExp; readonly to: string };
+
+const patterns: Record<Locale, readonly PatternTranslation[]> = {
+  en: [],
+  id: [
+    {
+      match:
+        /^Set engines\.node to (.+) or document why the package intentionally targets a different runtime\.$/u,
+      to: "Set engines.node ke $1, atau dokumentasikan alasan package ini sengaja menargetkan runtime berbeda.",
+    },
+    {
+      match: /^The declared package manager is missing (.+)\.$/u,
+      to: "Package manager yang dideklarasikan tidak memiliki $1.",
+    },
+    {
+      match: /^root (.+); package (.+)$/u,
+      to: "root $1; package $2",
+    },
+    {
+      match:
+        /^(.+): (\d+) findings detected; (\d+) displayed and (\d+) omitted by the scan output budget\.$/u,
+      to: "$1: $2 temuan terdeteksi; $3 ditampilkan dan $4 dihilangkan oleh batas output scan.",
+    },
+  ],
+};
+
+/**
+ * Translates rule finding text for display. Exact matches win; parameterised
+ * text falls back to pattern substitution; anything unknown degrades to the
+ * English source rather than showing a raw key.
  */
 export function translateRuleText(locale: Locale, source: string): string {
-  return catalogs[locale][source] ?? source;
+  const exact = catalogs[locale][source];
+  if (exact !== undefined) return exact;
+  for (const { match, to } of patterns[locale]) {
+    if (match.test(source)) return source.replace(match, to);
+  }
+  return source;
+}
+
+/** Exposed so the completeness suite can treat pattern-covered text as translated. */
+export function hasRuleTextTranslation(
+  locale: Locale,
+  source: string,
+): boolean {
+  if (source in catalogs[locale]) return true;
+  return patterns[locale].some(({ match }) => match.test(source));
 }
 
 export function ruleTextCatalog(
