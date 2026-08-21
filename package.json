@@ -16,12 +16,15 @@
     "test:stable-matrix": "node scripts/stable-matrix.mjs",
     "dogfood": "pnpm --filter reposentinel build && node scripts/dogfood.mjs",
     "dev": "pnpm --filter reposentinel dev",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm exec biome check packages scripts",
     "test": "pnpm -r test",
+    "test:coverage": "pnpm exec vitest run --coverage",
     "typecheck": "pnpm build && pnpm -r typecheck"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.9",
     "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "4.1.10",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.10",

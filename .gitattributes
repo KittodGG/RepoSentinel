@@ -1,0 +1,36 @@
+# Keep source, configuration, documentation, and workflows deterministic across platforms.
+* text=auto eol=lf
+
+# Preserve native line endings only for Windows command scripts.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# These are binary assets, not text files.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.zip binary
+*.tgz binary
+*.vsix binary
+*.pdf binary
+
+# SVG is text and should remain reviewable.
+*.svg text eol=lf
+
+* linguist-vendored=false
+node_modules/ linguist-vendored=true
+coverage/ linguist-generated=true
+dist/ linguist-generated=true
+
+# Keep local secrets out of GitHub language statistics and diffs.
+.env* linguist-generated=true
+.env.example linguist-generated=false
+
+# Keep GitHub's dependency graph focused on the actual lockfile.
+pnpm-lock.yaml linguist-generated=false

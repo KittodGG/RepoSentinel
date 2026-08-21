@@ -1,10 +1,15 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, resolve, dirname } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const extensions = new Set([".md", ".yml", ".yaml"]);
-const ignoredDirectories = new Set([".git", "node_modules", "dist", "artifacts"]);
+const ignoredDirectories = new Set([
+  ".git",
+  "node_modules",
+  "dist",
+  "artifacts",
+]);
 const missing = [];
 
 async function walk(directory) {
@@ -15,11 +20,19 @@ async function walk(directory) {
       await walk(absolute);
       continue;
     }
-    if (!extensions.has(entry.name.slice(entry.name.lastIndexOf(".")))) continue;
+    if (!extensions.has(entry.name.slice(entry.name.lastIndexOf("."))))
+      continue;
     const content = await readFile(absolute, "utf8");
     for (const match of content.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)) {
       const target = match[1].split("#", 1)[0].trim();
-      if (!target || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:") || target.startsWith("<")) continue;
+      if (
+        !target ||
+        target.startsWith("http://") ||
+        target.startsWith("https://") ||
+        target.startsWith("mailto:") ||
+        target.startsWith("<")
+      )
+        continue;
       const candidate = resolve(dirname(absolute), target);
       try {
         await stat(candidate);

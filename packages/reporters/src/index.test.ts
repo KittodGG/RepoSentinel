@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
 import type { Finding } from "@reposentinel/core";
-import { renderHtmlReport, renderJsonReport, renderMarkdownReport, renderSarifReport, renderTerminalReport } from "./index.js";
+import { describe, expect, it } from "vitest";
+import {
+  renderHtmlReport,
+  renderJsonReport,
+  renderMarkdownReport,
+  renderSarifReport,
+  renderTerminalReport,
+} from "./index.js";
 
 const warning: Finding = {
   ruleId: "documentation.quickstart",
@@ -11,7 +17,7 @@ const warning: Finding = {
   line: 12,
   evidence: "No setup command was detected.",
   remediation: "Add a Quick Start section with one run command.",
-  fingerprint: "documentation.quickstart:README.md:12"
+  fingerprint: "documentation.quickstart:README.md:12",
 };
 
 describe("reporters", () => {
@@ -24,7 +30,7 @@ describe("reporters", () => {
       ignoredCount: 1,
       findings: [warning],
       threshold: "error",
-      color: false
+      color: false,
     });
     expect(output).toContain("kesiapan repository, tanpa kebisingan");
     expect(output).toContain("SIAP");
@@ -47,7 +53,7 @@ describe("reporters", () => {
       repository: "fixture",
       profile: "public",
       findings: [warning],
-      threshold: "error"
+      threshold: "error",
     });
     expect(output).toContain("# RepoSentinel Report");
     expect(output).toContain("| Warning | 1 |");
@@ -61,12 +67,19 @@ describe("reporters", () => {
       locale: "en",
       repository: "fixture",
       profile: "public",
-      findings: [{ ...warning, message: "bad [message] *here*", evidence: "[click](javascript:alert(1)) | raw", remediation: "<script>alert(1)</script>" }],
+      findings: [
+        {
+          ...warning,
+          message: "bad [message] *here*",
+          evidence: "[click](javascript:alert(1)) | raw",
+          remediation: "<script>alert(1)</script>",
+        },
+      ],
       threshold: "error",
-      network: true
+      network: true,
     });
-    expect(output).toContain("bad \\\[message\\] \\\*here\\\*");
-    expect(output).toContain("\\[click\\](javascript:alert(1)) \\\| raw");
+    expect(output).toContain("bad \\[message\\] \\*here\\*");
+    expect(output).toContain("\\[click\\](javascript:alert(1)) \\| raw");
     expect(output).toContain("\\<script\\>alert(1)\\</script\\>");
     expect(output).toContain("- Network: `enabled (opt-in)`");
   });
@@ -77,14 +90,34 @@ describe("reporters", () => {
       repository: "fixture",
       profile: "public",
       findings: [warning],
-      threshold: "error"
+      threshold: "error",
     });
-    const parsed = JSON.parse(output) as { version: string; runs: Array<{ results: Array<{ ruleId: string; level: string; locations: Array<{ physicalLocation: { artifactLocation: { uri: string }; region: { startLine: number } } }> }> }> };
+    const parsed = JSON.parse(output) as {
+      version: string;
+      runs: Array<{
+        results: Array<{
+          ruleId: string;
+          level: string;
+          locations: Array<{
+            physicalLocation: {
+              artifactLocation: { uri: string };
+              region: { startLine: number };
+            };
+          }>;
+        }>;
+      }>;
+    };
     expect(parsed.version).toBe("2.1.0");
     expect(parsed.runs[0]?.results[0]?.ruleId).toBe("documentation.quickstart");
     expect(parsed.runs[0]?.results[0]?.level).toBe("warning");
-    expect(parsed.runs[0]?.results[0]?.locations[0]?.physicalLocation.artifactLocation.uri).toBe("README.md");
-    expect(parsed.runs[0]?.results[0]?.locations[0]?.physicalLocation.region.startLine).toBe(12);
+    expect(
+      parsed.runs[0]?.results[0]?.locations[0]?.physicalLocation
+        .artifactLocation.uri,
+    ).toBe("README.md");
+    expect(
+      parsed.runs[0]?.results[0]?.locations[0]?.physicalLocation.region
+        .startLine,
+    ).toBe(12);
   });
 
   it("deduplicates SARIF driver rules and emits rule indexes", () => {
@@ -93,12 +126,21 @@ describe("reporters", () => {
       repository: "fixture",
       profile: "public",
       findings: [warning, { ...warning, path: "CONTRIBUTING.md", line: 4 }],
-      threshold: "error"
+      threshold: "error",
     });
-    const parsed = JSON.parse(output) as { runs: Array<{ tool: { driver: { rules: Array<{ id: string }> } }; results: Array<{ ruleId: string; ruleIndex: number }> }> };
+    const parsed = JSON.parse(output) as {
+      runs: Array<{
+        tool: { driver: { rules: Array<{ id: string }> } };
+        results: Array<{ ruleId: string; ruleIndex: number }>;
+      }>;
+    };
     expect(parsed.runs[0]?.tool.driver.rules).toHaveLength(1);
-    expect(parsed.runs[0]?.tool.driver.rules[0]?.id).toBe("documentation.quickstart");
-    expect(parsed.runs[0]?.results.every((result) => result.ruleIndex === 0)).toBe(true);
+    expect(parsed.runs[0]?.tool.driver.rules[0]?.id).toBe(
+      "documentation.quickstart",
+    );
+    expect(
+      parsed.runs[0]?.results.every((result) => result.ruleIndex === 0),
+    ).toBe(true);
   });
 
   it("renders machine JSON without ANSI escape sequences", () => {
@@ -107,9 +149,13 @@ describe("reporters", () => {
       repository: "fixture",
       profile: "public",
       findings: [warning],
-      threshold: "error"
+      threshold: "error",
     });
-    const parsed = JSON.parse(output) as { schemaVersion: string; locale: string; findings: Finding[] };
+    const parsed = JSON.parse(output) as {
+      schemaVersion: string;
+      locale: string;
+      findings: Finding[];
+    };
     expect(parsed.schemaVersion).toBe("reposentinel.report/v1");
     expect(parsed.locale).toBe("en");
     expect(parsed.findings[0]?.ruleId).toBe("documentation.quickstart");
@@ -124,9 +170,16 @@ describe("reporters", () => {
       findings: [warning],
       threshold: "error" as const,
       changedSince: "origin/main",
-      changedFiles: ["README.md"]
+      changedFiles: ["README.md"],
     };
-    expect(renderTerminalReport({ ...options, filesScanned: 2, ignoredCount: 0, color: false })).toContain("changed since origin/main");
+    expect(
+      renderTerminalReport({
+        ...options,
+        filesScanned: 2,
+        ignoredCount: 0,
+        color: false,
+      }),
+    ).toContain("changed since origin/main");
     expect(renderMarkdownReport(options)).toContain("Changed files: `1`");
     expect(renderJsonReport(options)).toContain('"mode": "changed-files"');
     expect(renderJsonReport(options)).toContain('"network": "disabled"');
@@ -141,9 +194,22 @@ describe("reporters", () => {
       profile: "public" as const,
       findings: [],
       threshold: "error" as const,
-      scanBudget: { maxFiles: 10, maxTotalBytes: 1000, filesConsidered: 10, textBytesCached: 1000, truncated: true }
+      scanBudget: {
+        maxFiles: 10,
+        maxTotalBytes: 1000,
+        filesConsidered: 10,
+        textBytesCached: 1000,
+        truncated: true,
+      },
     };
-    expect(renderTerminalReport({ ...options, filesScanned: 10, ignoredCount: 0, color: false })).toContain("bounded");
+    expect(
+      renderTerminalReport({
+        ...options,
+        filesScanned: 10,
+        ignoredCount: 0,
+        color: false,
+      }),
+    ).toContain("bounded");
     expect(renderMarkdownReport(options)).toContain("Scan budget");
     expect(renderJsonReport(options)).toContain('"truncated": true');
     expect(renderHtmlReport(options)).toContain("bounded");
@@ -154,10 +220,16 @@ describe("reporters", () => {
       locale: "en",
       repository: "fixture <script>",
       profile: "public",
-      findings: [{ ...warning, message: "Unsafe <message> & value", evidence: "\"quoted\"" }],
+      findings: [
+        {
+          ...warning,
+          message: "Unsafe <message> & value",
+          evidence: '"quoted"',
+        },
+      ],
       threshold: "error",
       changedSince: "origin/main",
-      changedFiles: ["README.md"]
+      changedFiles: ["README.md"],
     });
     expect(output).toContain("<!doctype html>");
     expect(output).toContain("Changed-files mode");
@@ -168,25 +240,29 @@ describe("reporters", () => {
   });
 
   it("keeps the Markdown report structure stable", () => {
-    expect(renderMarkdownReport({
-      locale: "en",
-      repository: "fixture",
-      profile: "public",
-      findings: [warning],
-      threshold: "error"
-    })).toMatchSnapshot();
+    expect(
+      renderMarkdownReport({
+        locale: "en",
+        repository: "fixture",
+        profile: "public",
+        findings: [warning],
+        threshold: "error",
+      }),
+    ).toMatchSnapshot();
   });
 
   it("keeps the plain terminal report structure stable", () => {
-    expect(renderTerminalReport({
-      locale: "en",
-      repository: "fixture",
-      profile: "public",
-      filesScanned: 4,
-      ignoredCount: 1,
-      findings: [warning],
-      threshold: "error",
-      color: false
-    })).toMatchSnapshot();
+    expect(
+      renderTerminalReport({
+        locale: "en",
+        repository: "fixture",
+        profile: "public",
+        filesScanned: 4,
+        ignoredCount: 1,
+        findings: [warning],
+        threshold: "error",
+        color: false,
+      }),
+    ).toMatchSnapshot();
   });
 });
