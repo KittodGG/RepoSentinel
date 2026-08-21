@@ -1,6 +1,18 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { workspace, window, commands, languages, Uri, Diagnostic, DiagnosticSeverity, Range, RelativePattern, type ExtensionContext, type FileSystemWatcher } from "vscode";
+import {
+  commands,
+  Diagnostic,
+  DiagnosticSeverity,
+  type ExtensionContext,
+  type FileSystemWatcher,
+  languages,
+  Range,
+  RelativePattern,
+  Uri,
+  window,
+  workspace,
+} from "vscode";
 
 type ReportFinding = {
   ruleId: string;
@@ -32,7 +44,11 @@ function diagnosticFor(finding: ReportFinding): Diagnostic {
   const line = Math.max(0, (finding.line ?? 1) - 1);
   const column = Math.max(0, (finding.column ?? 1) - 1);
   const endColumn = finding.column ? column + 1 : 1000;
-  const diagnostic = new Diagnostic(new Range(line, column, line, endColumn), `${finding.message} Fix: ${finding.remediation}`, severityOf(finding.severity));
+  const diagnostic = new Diagnostic(
+    new Range(line, column, line, endColumn),
+    `${finding.message} Fix: ${finding.remediation}`,
+    severityOf(finding.severity),
+  );
   diagnostic.code = finding.ruleId;
   diagnostic.source = "RepoSentinel";
   return diagnostic;
@@ -41,31 +57,52 @@ function diagnosticFor(finding: ReportFinding): Diagnostic {
 async function runScan(root: string): Promise<JsonReport> {
   const executable = process.env.REPOSENTINEL_BIN || "reposentinel";
   return await new Promise((resolve, reject) => {
-    const child = spawn(executable, ["check", root, "--format", "json", "--no-color"], {
-      cwd: root,
-      env: { ...process.env, CI: "true" },
-      stdio: ["ignore", "pipe", "pipe"]
-    });
+    const child = spawn(
+      executable,
+      ["check", root, "--format", "json", "--no-color"],
+      {
+        cwd: root,
+        env: { ...process.env, CI: "true" },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => { stdout += chunk; });
-    child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
     child.once("error", reject);
     child.once("close", (code) => {
       try {
         const report = JSON.parse(stdout) as JsonReport;
-        if (code !== 0 && code !== 1) reject(new Error(stderr.trim() || `RepoSentinel exited with code ${code ?? "unknown"}`));
+        if (code !== 0 && code !== 1)
+          reject(
+            new Error(
+              stderr.trim() ||
+                `RepoSentinel exited with code ${code ?? "unknown"}`,
+            ),
+          );
         else resolve(report);
       } catch (error) {
-        reject(new Error(stderr.trim() || (error instanceof Error ? error.message : String(error))));
+        reject(
+          new Error(
+            stderr.trim() ||
+              (error instanceof Error ? error.message : String(error)),
+          ),
+        );
       }
     });
   });
 }
 
-async function scanWorkspace(collection: ReturnType<typeof languages.createDiagnosticCollection>): Promise<void> {
+async function scanWorkspace(
+  collection: ReturnType<typeof languages.createDiagnosticCollection>,
+): Promise<void> {
   const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!root) {
     void window.showWarningMessage("RepoSentinel requires an open workspace.");
@@ -82,26 +119,45 @@ async function scanWorkspace(collection: ReturnType<typeof languages.createDiagn
       diagnostics.push(diagnosticFor(finding));
       grouped.set(uri.toString(), diagnostics);
     }
-    for (const [key, diagnostics] of grouped) collection.set(Uri.parse(key), diagnostics);
-    void window.setStatusBarMessage(`RepoSentinel: ${report.findings?.length ?? 0} finding(s)`, 4000);
+    for (const [key, diagnostics] of grouped)
+      collection.set(Uri.parse(key), diagnostics);
+    void window.setStatusBarMessage(
+      `RepoSentinel: ${report.findings?.length ?? 0} finding(s)`,
+      4000,
+    );
   } catch (error) {
-    void window.showErrorMessage(`RepoSentinel scan failed: ${error instanceof Error ? error.message : String(error)}`);
+    void window.showErrorMessage(
+      `RepoSentinel scan failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
 export function activate(context: ExtensionContext): void {
   const collection = languages.createDiagnosticCollection("reposentinel");
   context.subscriptions.push(collection);
-  context.subscriptions.push(commands.registerCommand("reposentinel.scan", () => scanWorkspace(collection)));
+  context.subscriptions.push(
+    commands.registerCommand("reposentinel.scan", () =>
+      scanWorkspace(collection),
+    ),
+  );
 
   const folder = workspace.workspaceFolders?.[0];
   if (!folder) return;
-  const watcher: FileSystemWatcher = workspace.createFileSystemWatcher(new RelativePattern(folder, "**/*.{md,mdx,yml,yaml,json,js,ts,tsx,jsx}"));
-  const metadataWatcher: FileSystemWatcher = workspace.createFileSystemWatcher(new RelativePattern(folder, "{.gitignore,.reposentinel.yml,pnpm-lock.yaml}"));
+  const watcher: FileSystemWatcher = workspace.createFileSystemWatcher(
+    new RelativePattern(folder, "**/*.{md,mdx,yml,yaml,json,js,ts,tsx,jsx}"),
+  );
+  const metadataWatcher: FileSystemWatcher = workspace.createFileSystemWatcher(
+    new RelativePattern(
+      folder,
+      "{.gitignore,.reposentinel.yml,pnpm-lock.yaml}",
+    ),
+  );
   let timer: ReturnType<typeof setTimeout> | undefined;
   const schedule = (): void => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => { void scanWorkspace(collection); }, 500);
+    timer = setTimeout(() => {
+      void scanWorkspace(collection);
+    }, 500);
   };
   watcher.onDidCreate(schedule, undefined, context.subscriptions);
   watcher.onDidChange(schedule, undefined, context.subscriptions);

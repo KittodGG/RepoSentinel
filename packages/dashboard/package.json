@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
-    "lint": "tsc --noEmit",
+    "lint": "pnpm exec biome check src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

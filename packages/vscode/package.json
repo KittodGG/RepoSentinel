@@ -6,12 +6,24 @@
   "version": "1.0.0",
   "description": "VS Code diagnostics adapter for RepoSentinel JSON reports",
   "license": "MIT",
-  "categories": ["Linters"],
-  "engines": { "vscode": "^1.103.0" },
-  "repository": { "type": "git", "url": "https://github.com/KittodGG/RepoSentinel" },
+  "categories": [
+    "Linters"
+  ],
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KittodGG/RepoSentinel"
+  },
   "type": "module",
   "main": "dist/extension.cjs",
-  "files": ["dist", "package.json", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
   "contributes": {
     "commands": [
       {
@@ -20,11 +32,13 @@
       }
     ]
   },
-  "activationEvents": ["onCommand:reposentinel.scan"],
+  "activationEvents": [
+    "onCommand:reposentinel.scan"
+  ],
   "scripts": {
     "build": "tsup src/extension.ts --format cjs --external vscode --clean",
     "package": "pnpm build && vsce package",
-    "lint": "tsc --noEmit",
+    "lint": "pnpm exec biome check src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },

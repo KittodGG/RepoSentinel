@@ -52,7 +52,9 @@ export type MessageKey =
   | "error.invalidLocale"
   | "error.invalidPath";
 
-type MessageValue = string | ((vars: Record<string, string | number>) => string);
+type MessageValue =
+  | string
+  | ((vars: Record<string, string | number>) => string);
 
 type Catalog = Record<MessageKey, MessageValue>;
 
@@ -69,7 +71,8 @@ const catalogs: Record<Locale, Catalog> = {
     "cli.command.rules": "List enabled repository rules",
     "cli.command.explain": "Explain a repository rule",
     "cli.command.baseline": "Create a baseline from the current scan",
-    "baseline.created": ({ path, count }) => `Baseline created at ${path} with ${count} finding(s).`,
+    "baseline.created": ({ path, count }) =>
+      `Baseline created at ${path} with ${count} finding(s).`,
     "init.title": "RepoSentinel setup",
     "init.profileQuestion": "Which repository profile should be used?",
     "init.created": ({ path }) => `Configuration created at ${path}`,
@@ -105,8 +108,9 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.error": "error",
     "finding.critical": "critical",
     "finding.info": "info",
-    "error.invalidLocale": ({ locale }) => `Unsupported locale "${locale}". Use: en, id.`,
-    "error.invalidPath": ({ path }) => `Target path does not exist: ${path}`
+    "error.invalidLocale": ({ locale }) =>
+      `Unsupported locale "${locale}". Use: en, id.`,
+    "error.invalidPath": ({ path }) => `Target path does not exist: ${path}`,
   },
   id: {
     "brand.tagline": "kesiapan repository, tanpa kebisingan",
@@ -120,7 +124,8 @@ const catalogs: Record<Locale, Catalog> = {
     "cli.command.rules": "Menampilkan rule repository yang aktif",
     "cli.command.explain": "Menjelaskan sebuah rule repository",
     "cli.command.baseline": "Membuat baseline dari hasil scan saat ini",
-    "baseline.created": ({ path, count }) => `Baseline dibuat di ${path} dengan ${count} finding.`,
+    "baseline.created": ({ path, count }) =>
+      `Baseline dibuat di ${path} dengan ${count} finding.`,
     "init.title": "Setup RepoSentinel",
     "init.profileQuestion": "Profile repository mana yang digunakan?",
     "init.created": ({ path }) => `Konfigurasi dibuat di ${path}`,
@@ -156,19 +161,30 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.error": "error",
     "finding.critical": "critical",
     "finding.info": "info",
-    "error.invalidLocale": ({ locale }) => `Locale "${locale}" tidak didukung. Gunakan: en, id.`,
-    "error.invalidPath": ({ path }) => `Path target tidak ditemukan: ${path}`
-  }
+    "error.invalidLocale": ({ locale }) =>
+      `Locale "${locale}" tidak didukung. Gunakan: en, id.`,
+    "error.invalidPath": ({ path }) => `Path target tidak ditemukan: ${path}`,
+  },
 };
 
 function normalizeLocale(value: string | undefined): Locale | undefined {
   if (!value) return undefined;
   const base = value.trim().toLowerCase().split(/[-_]/u)[0];
-  return supportedLocales.includes(base as Locale) ? (base as Locale) : undefined;
+  return supportedLocales.includes(base as Locale)
+    ? (base as Locale)
+    : undefined;
 }
 
-export function resolveLocale(explicit?: string, environment: NodeJS.ProcessEnv = process.env): Locale {
-  const candidates = [explicit, environment.REPOSENTINEL_LANG, environment.LC_ALL, environment.LANG];
+export function resolveLocale(
+  explicit?: string,
+  environment: NodeJS.ProcessEnv = process.env,
+): Locale {
+  const candidates = [
+    explicit,
+    environment.REPOSENTINEL_LANG,
+    environment.LC_ALL,
+    environment.LANG,
+  ];
   for (const candidate of candidates) {
     const locale = normalizeLocale(candidate);
     if (locale) return locale;
@@ -186,7 +202,7 @@ export function createTranslator(locale: Locale) {
     t(key: MessageKey, vars: Record<string, string | number> = {}) {
       const value = catalogs[locale][key];
       return typeof value === "function" ? value(vars) : value;
-    }
+    },
   } as const;
 }
 

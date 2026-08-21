@@ -8,5 +8,5 @@ export default defineConfig({
   splitting: false,
   bundle: true,
   target: "es2023",
-  noExternal: [/^@reposentinel\//u]
+  noExternal: [/^@reposentinel\//u],
 });

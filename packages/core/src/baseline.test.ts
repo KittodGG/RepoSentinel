@@ -6,7 +6,7 @@ import {
   createBaselineDocument,
   filterBaselineFindings,
   loadBaseline,
-  writeBaseline
+  writeBaseline,
 } from "./baseline.js";
 import type { Finding } from "./index.js";
 
@@ -18,7 +18,7 @@ const finding: Finding = {
   path: "README.md",
   line: 12,
   remediation: "Add a Quick Start section.",
-  fingerprint: "documentation.quickstart:README.md:12"
+  fingerprint: "documentation.quickstart:README.md:12",
 };
 
 describe("baseline", () => {
@@ -26,24 +26,40 @@ describe("baseline", () => {
     const document = createBaselineDocument([finding, finding]);
     expect(document.schemaVersion).toBe("reposentinel.baseline/v1");
     expect(document.fingerprints).toEqual([finding.fingerprint]);
-    expect(filterBaselineFindings([finding], new Set(document.fingerprints))).toEqual([]);
+    expect(
+      filterBaselineFindings([finding], new Set(document.fingerprints)),
+    ).toEqual([]);
   });
 
   it("rejects critical findings from a baseline unless explicitly allowed", () => {
     const critical = { ...finding, severity: "critical" as const };
-    expect(() => createBaselineDocument([critical])).toThrow("--allow-critical");
-    expect(createBaselineDocument([critical], { allowCritical: true }).fingerprints).toEqual([critical.fingerprint]);
+    expect(() => createBaselineDocument([critical])).toThrow(
+      "--allow-critical",
+    );
+    expect(
+      createBaselineDocument([critical], { allowCritical: true }).fingerprints,
+    ).toEqual([critical.fingerprint]);
   });
 
   it("writes and loads a repository-local baseline", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-baseline-"));
-    const path = await writeBaseline(root, ".reposentinel/baseline.json", [finding]);
-    expect(JSON.parse(await readFile(path, "utf8")).schemaVersion).toBe("reposentinel.baseline/v1");
-    expect(await loadBaseline(root, ".reposentinel/baseline.json")).toEqual(new Set([finding.fingerprint]));
+    const path = await writeBaseline(root, ".reposentinel/baseline.json", [
+      finding,
+    ]);
+    expect(JSON.parse(await readFile(path, "utf8")).schemaVersion).toBe(
+      "reposentinel.baseline/v1",
+    );
+    expect(await loadBaseline(root, ".reposentinel/baseline.json")).toEqual(
+      new Set([finding.fingerprint]),
+    );
   });
 
   it("rejects a baseline path outside the repository root", async () => {
-    const root = await mkdtemp(join(tmpdir(), "reposentinel-baseline-boundary-"));
-    await expect(writeBaseline(root, "../baseline.json", [finding])).rejects.toThrow("inside the repository root");
+    const root = await mkdtemp(
+      join(tmpdir(), "reposentinel-baseline-boundary-"),
+    );
+    await expect(
+      writeBaseline(root, "../baseline.json", [finding]),
+    ).rejects.toThrow("inside the repository root");
   });
 });

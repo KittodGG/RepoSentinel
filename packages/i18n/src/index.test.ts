@@ -4,7 +4,7 @@ import {
   getCatalog,
   isSupportedLocale,
   resolveLocale,
-  supportedLocales
+  supportedLocales,
 } from "./index.js";
 
 describe("localization", () => {
@@ -28,7 +28,9 @@ describe("localization", () => {
   it("translates and interpolates messages", () => {
     expect(createTranslator("en").t("scan.completed")).toBe("Scan completed");
     expect(createTranslator("id").t("scan.completed")).toBe("Scan selesai");
-    expect(createTranslator("id").t("error.invalidLocale", { locale: "fr" })).toContain("fr");
+    expect(
+      createTranslator("id").t("error.invalidLocale", { locale: "fr" }),
+    ).toContain("fr");
   });
 
   it("keeps every catalog key aligned", () => {

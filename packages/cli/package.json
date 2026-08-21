@@ -23,7 +23,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/index.ts",
-    "lint": "tsc --noEmit",
+    "lint": "pnpm exec biome check src",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },

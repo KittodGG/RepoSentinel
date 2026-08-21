@@ -5,6 +5,9 @@
 [![Status: stable](https://img.shields.io/badge/status-stable-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RELEASE_READINESS.md)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RepoSentinel_Project_Context.md)
 [![Languages: EN%20%7C%20ID](https://img.shields.io/badge/languages-EN%20%7C%20ID-a78bfa?style=for-the-badge&labelColor=11102b)](docs/TECH_STACK_DECISIONS.md)
+[![Quality](https://github.com/KittodGG/RepoSentinel/actions/workflows/quality.yml/badge.svg)](https://github.com/KittodGG/RepoSentinel/actions/workflows/quality.yml)
+[![CodeQL](https://github.com/KittodGG/RepoSentinel/actions/workflows/codeql.yml/badge.svg)](https://github.com/KittodGG/RepoSentinel/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/KittodGG/RepoSentinel/badge)](https://securityscorecards.dev/viewer/?uri=github.com/KittodGG/RepoSentinel)
 
 ![Static Sentinel Console preview](docs/assets/reposentinel-terminal-ready.png)
 
@@ -19,7 +22,7 @@
 
 ## Contribution & governance
 
-The repository is public following the stable 1.0.0 release. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution.
+The repository is public following the stable 1.0.0 release. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution. Quality CI runs on Ubuntu, macOS, and Windows; linting uses Biome, coverage uses Vitest V8, and supply-chain analysis uses CodeQL and OpenSSF Scorecard.
 
 | English | Bahasa Indonesia |
 |---|---|
@@ -294,6 +297,10 @@ reposentinel check . --profile portfolio --lang id
 # Bahasa English untuk CI yang deterministik
 CI=true reposentinel check . --lang en --format json
 
+# Workspace quality gates
+pnpm lint
+pnpm test:coverage
+
 # Jelajahi rule dan buat report Markdown
 reposentinel rules --category security --lang id
 reposentinel report . --format markdown --output report.md --lang id
@@ -368,9 +375,11 @@ Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot va
 | CLI parser | Commander |
 | Interactive prompts | `@clack/prompts` |
 | Config | `yaml` + `zod` |
-| Discovery | `fast-glob` + `ignore` |
-| Markdown | Unified/Remark AST |
-| Test | Vitest |
+| Discovery | Node.js `readdir` + `ignore` |
+| Markdown | Deterministic heading/link checks; AST checks are planned for Phase 4 |
+| Test | Vitest 4 + V8 coverage |
+| Lint | Biome |
+| CI and supply chain | GitHub Actions on Ubuntu/macOS/Windows, CodeQL, OpenSSF Scorecard |
 | Reporters | Custom deterministic terminal, Markdown, JSON, SARIF, HTML |
 
 Keputusan ini mengutamakan runtime LTS, dependency yang terukur, core engine yang terpisah dari UI, dan kemampuan fallback untuk CI/SSH. Detailnya ada di [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md).

@@ -26,24 +26,27 @@ describe("configuration", () => {
 
   it("loads a YAML override without enabling network", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-config-"));
-    await writeFile(join(root, ".reposentinel.yml"), [
-      "extends: recommended",
-      "profile: npm-package",
-      "custom_rules: .reposentinel/custom-rules.json",
-      "baseline: .reposentinel/baseline.json",
-      "ignore:",
-      "  - vendor/**",
-      "report:",
-      "  formats: [json, sarif]",
-      "  output_dir: .reposentinel/reports",
-      "rules:",
-      "  security.private-key: critical",
-      "ci:",
-      "  fail_on: warning",
-      "security:",
-      "  redact_findings: true",
-      ""
-    ].join("\n"));
+    await writeFile(
+      join(root, ".reposentinel.yml"),
+      [
+        "extends: recommended",
+        "profile: npm-package",
+        "custom_rules: .reposentinel/custom-rules.json",
+        "baseline: .reposentinel/baseline.json",
+        "ignore:",
+        "  - vendor/**",
+        "report:",
+        "  formats: [json, sarif]",
+        "  output_dir: .reposentinel/reports",
+        "rules:",
+        "  security.private-key: critical",
+        "ci:",
+        "  fail_on: warning",
+        "security:",
+        "  redact_findings: true",
+        "",
+      ].join("\n"),
+    );
 
     const loaded = await loadConfig(root);
     expect(loaded.config.profile).toBe("npm-package");
@@ -56,6 +59,8 @@ describe("configuration", () => {
     expect(loaded.config.report?.outputDir).toBe(".reposentinel/reports");
     expect(loaded.config.ciFailOn).toBe("warning");
     expect(loaded.config.security.network).toBe(false);
-    expect(severityOverride(loaded.config, "security.private-key", "warning")).toBe("critical");
+    expect(
+      severityOverride(loaded.config, "security.private-key", "warning"),
+    ).toBe("critical");
   });
 });
