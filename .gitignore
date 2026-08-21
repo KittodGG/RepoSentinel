@@ -15,3 +15,12 @@ docs/assets/demo-frames/
 .DS_Store
 .vscode/
 .idea/
+
+# The corpus canary is a positive control: its planted secrets must reach the
+# repository or the gate silently loses its detection floor. Nothing under it
+# may be ignored.
+!fixtures/corpus-canary/**
+
+# Generated patch series are working artifacts, not source. They also embed
+# fixture credentials as diff content, which the scanner rightly flags.
+*.patch

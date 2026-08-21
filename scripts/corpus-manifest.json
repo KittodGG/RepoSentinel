@@ -8,6 +8,19 @@
   },
   "repositories": [
     {
+      "name": "local/corpus-canary",
+      "path": "fixtures/corpus-canary",
+      "expect": {
+        "minSecurityFindings": 11,
+        "maxScore": 10,
+        "rules": {
+          "security.credential-pattern": 9,
+          "security.private-key": 1,
+          "security.env-file": 1
+        }
+      }
+    },
+    {
       "name": "colinhacks/zod",
       "commit": "e516c3baf22615e20934116abebfed6c000222c2",
       "minScore": 45

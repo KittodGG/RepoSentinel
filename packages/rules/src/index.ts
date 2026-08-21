@@ -1,5 +1,6 @@
 import { posix } from "node:path";
 import {
+  EMPTY_TARGET_RULE_ID,
   type Finding,
   fingerprintFor,
   normalizeFindings,
@@ -276,10 +277,23 @@ function isPlausibleJwt(token: string): boolean {
   }
 }
 
+/**
+ * Directory segments that mark a test or fixture tree, across ecosystems.
+ */
+const FIXTURE_DIRECTORY =
+  /(?:^|\/)(?:test|tests|testdata|spec|specs|fixtures?|examples?|__tests__|__fixtures__|__mocks__|e2e|benches?|benchmarks?)(?:\/|$)/iu;
+
+/**
+ * Filename conventions that mark a single test file. Directory names alone miss
+ * the dominant per-file conventions — `a.test.ts` in JS/TS, `a_test.go` in Go,
+ * `test_a.py` in Python — which would otherwise report synthetic fixture
+ * credentials at full severity.
+ */
+const FIXTURE_FILENAME =
+  /(?:^|\/)(?:test_[^/]+|[^/]+_test|[^/]+\.(?:test|spec|fixture|bench)|conftest)\.[a-z0-9]+$/iu;
+
 function isLikelyFixturePath(path: string): boolean {
-  return /(?:^|\/)(?:test|tests|testdata|fixtures|examples?|__fixtures__)(?:\/|$)/iu.test(
-    path,
-  );
+  return FIXTURE_DIRECTORY.test(path) || FIXTURE_FILENAME.test(path);
 }
 
 function isLikelyTestCertificatePath(path: string): boolean {
@@ -605,12 +619,15 @@ export const rules: readonly RuleDefinition[] = [
               "credential";
             findings.push(
               finding(this, context, {
-                severity:
-                  prefix === "connection-string://"
+                // Fixture paths win over credential family: a connection
+                // string in a test file is no more exposed than a token in the
+                // same file, and checking the family first left the two at
+                // different severities.
+                severity: isLikelyFixturePath(path)
+                  ? "info"
+                  : prefix === "connection-string://"
                     ? "warning"
-                    : isLikelyFixturePath(path)
-                      ? "info"
-                      : "error",
+                    : "error",
                 path,
                 line: lineIndex + 1,
                 message: "A high-confidence credential pattern was detected.",
@@ -1276,6 +1293,27 @@ export function runRules(
   context: RepositoryContext,
   selectedRules = enabledRules(context),
 ): Finding[] {
+  // Presence rules would otherwise report a missing README, license, and
+  // contributor guide for a target that holds no files at all, producing a
+  // readiness score for something there is nothing to be ready about.
+  const scannable = context.files.filter(
+    (file) => !file.isIgnored && file.kind !== "directory",
+  );
+  if (scannable.length === 0) {
+    return [
+      {
+        ruleId: EMPTY_TARGET_RULE_ID,
+        category: "ci",
+        severity: "info",
+        message:
+          "No scannable files were found, so repository readiness cannot be assessed.",
+        remediation:
+          "Point the scan at a repository with tracked files, or relax the configured ignore patterns.",
+        fingerprint: fingerprintFor(EMPTY_TARGET_RULE_ID),
+      },
+    ];
+  }
+
   const findings: Finding[] = [];
   for (const rule of selectedRules) {
     const configured = context.config.rules[rule.id];

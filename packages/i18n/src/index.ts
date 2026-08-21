@@ -42,6 +42,7 @@ export type MessageKey =
   | "status.almostReady"
   | "status.needsAttention"
   | "status.notReady"
+  | "status.notApplicable"
   | "result.passed"
   | "result.passedWithWarnings"
   | "result.failed"
@@ -49,6 +50,13 @@ export type MessageKey =
   | "finding.error"
   | "finding.critical"
   | "finding.info"
+  | "finding.evidenceLabel"
+  | "finding.fixLabel"
+  | "scan.failsOn"
+  | "scan.exitCode"
+  | "scan.boundedScan"
+  | "scan.truncatedOutput"
+  | "scan.changedScope"
   | "error.invalidLocale"
   | "error.invalidPath";
 
@@ -101,6 +109,7 @@ const catalogs: Record<Locale, Catalog> = {
     "status.almostReady": "almost ready",
     "status.needsAttention": "needs attention",
     "status.notReady": "not ready",
+    "status.notApplicable": "not applicable",
     "result.passed": "passed",
     "result.passedWithWarnings": "passed with warnings",
     "result.failed": "failed",
@@ -108,6 +117,13 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.error": "error",
     "finding.critical": "critical",
     "finding.info": "info",
+    "finding.evidenceLabel": "Evidence",
+    "finding.fixLabel": "Fix",
+    "scan.failsOn": "fails on",
+    "scan.exitCode": "exit",
+    "scan.boundedScan": "bounded scan; some files were not read",
+    "scan.truncatedOutput": "output truncated by the report budget",
+    "scan.changedScope": "changed since",
     "error.invalidLocale": ({ locale }) =>
       `Unsupported locale "${locale}". Use: en, id.`,
     "error.invalidPath": ({ path }) => `Target path does not exist: ${path}`,
@@ -154,6 +170,7 @@ const catalogs: Record<Locale, Catalog> = {
     "status.almostReady": "hampir siap",
     "status.needsAttention": "perlu perhatian",
     "status.notReady": "belum siap",
+    "status.notApplicable": "tidak dapat dinilai",
     "result.passed": "lulus",
     "result.passedWithWarnings": "lulus dengan warning",
     "result.failed": "gagal",
@@ -161,6 +178,13 @@ const catalogs: Record<Locale, Catalog> = {
     "finding.error": "error",
     "finding.critical": "critical",
     "finding.info": "info",
+    "finding.evidenceLabel": "Bukti",
+    "finding.fixLabel": "Perbaikan",
+    "scan.failsOn": "gagal pada",
+    "scan.exitCode": "exit",
+    "scan.boundedScan": "scan dibatasi; sebagian file tidak dibaca",
+    "scan.truncatedOutput": "output dipotong oleh batas report",
+    "scan.changedScope": "perubahan sejak",
     "error.invalidLocale": ({ locale }) =>
       `Locale "${locale}" tidak didukung. Gunakan: en, id.`,
     "error.invalidPath": ({ path }) => `Path target tidak ditemukan: ${path}`,
@@ -209,3 +233,9 @@ export function createTranslator(locale: Locale) {
 export function getCatalog(locale: Locale): Readonly<Catalog> {
   return catalogs[locale];
 }
+
+export {
+  hasRuleTextTranslation,
+  ruleTextCatalog,
+  translateRuleText,
+} from "./rule-text.js";

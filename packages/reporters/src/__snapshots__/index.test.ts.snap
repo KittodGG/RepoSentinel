@@ -30,29 +30,29 @@ exports[`reporters > keeps the Markdown report structure stable 1`] = `
 `;
 
 exports[`reporters > keeps the plain terminal report structure stable 1`] = `
-"◈ RepoSentinel
-  repository readiness, without the noise
+"
+  ◈ RepoSentinel
+    repository readiness, without the noise
 
-Repository : fixture
-Profile    : public
-Mode       : local · network off · locale en
+    fixture  ·  public  ·  network off  ·  locale en
 
-╭─ health snapshot ───────────────────────────────────────────╮
-│ 95 / 100   READY                                            │
-│ 4 files · 1 ignored · threshold error                       │
-╰─────────────────────────────────────────────────────────────╯
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ 95/100  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱  READY          │
+  │ 4 files scanned · 1 ignored · fails on error                             │
+  ╰──────────────────────────────────────────────────────────────────────────╯
 
-Findings  ──────────────────────────────────────────────────────────────
-CRITICAL 0   ERROR 0   WARNING 1   INFO 0
+    0 critical   0 error   1 warning   0 info
 
-!  documentation.quickstart  README.md:12  warning
-   README does not contain a runnable Quick Start command.
-   Evidence: No setup command was detected.
-   Fix: Add a Quick Start section with one run command.
 
-Score  : 95 / 100
-Status : ready
-Result : passed with warnings
-Exit code : 0
+  WARNING ────────────────────────────────────────────────────────────────────
+
+    !  documentation.quickstart                                    README.md:12
+       README does not contain a runnable Quick Start command.
+       Evidence  No setup command was detected.
+       Fix       Add a Quick Start section with one run command.
+
+  ────────────────────────────────────────────────────────────────────────────
+    95/100 · ready · passed with warnings · exit 0
+
 "
 `;

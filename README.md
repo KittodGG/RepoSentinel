@@ -18,11 +18,11 @@
 
 </div>
 
-> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag; earlier prerelease versions remain historical release records only. The repository is public after the maintainer’s explicit visibility approval; the stable npm and GitHub release remain available for all users.
+> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag and `1.1.0` is cut and gated for release; earlier prerelease versions remain historical release records only. The repository is public after the maintainer’s explicit visibility approval; the stable npm and GitHub release remain available for all users.
 
 ## Contribution & governance
 
-The repository is public following the stable 1.0.0 release. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution. Quality CI runs on Ubuntu, macOS, and Windows; linting uses Biome, coverage uses Vitest V8, and supply-chain analysis uses CodeQL and OpenSSF Scorecard.
+The repository is public following the stable 1.0.0 release; 1.1.0 is the current release line. The contribution process is visible and documented from this page, with security and privacy boundaries preserved for every contribution. Quality CI runs on Ubuntu, macOS, and Windows; linting uses Biome, coverage uses Vitest V8, and supply-chain analysis uses CodeQL and OpenSSF Scorecard.
 
 | English | Bahasa Indonesia |
 |---|---|
@@ -55,7 +55,7 @@ RepoSentinel is a local-first developer tool that checks the layer around the co
 | **Explainable** | Every finding has a rule ID, severity, location, evidence, impact, and remediation. |
 | **Profile-driven** | `public`, `portfolio`, `npm-package`, `academic`, `private-team`, and `mobile-app` repositories can express different readiness contexts. |
 | **Safe by default** | The scanner reads the target as data and does not run its package scripts or build commands. |
-| **Multilingual** | UI copy and documentation can be localized while rule IDs and machine schemas remain stable. |
+| **Multilingual** | Terminal, Markdown, and HTML reports render finding text in the selected language. JSON and SARIF keep English, so rule IDs, schemas, and machine-readable findings stay identical across locales. |
 
 ### What it checks
 
@@ -127,7 +127,7 @@ npm install --global reposentinel@latest
 reposentinel --version
 
 # Reproducible version-pinned install
-npm install --global reposentinel@1.0.0
+npm install --global reposentinel@1.1.0
 reposentinel check . --lang en
 
 # During local development
@@ -193,6 +193,8 @@ reposentinel explain security.private-key --lang id
 
 The target language resolution order is `--lang`, `REPOSENTINEL_LANG`, `LC_ALL`, `LANG`, then deterministic English fallback. The YAML configuration does not define a `lang` key. Rule IDs, config keys, JSON keys, exit codes, and schema version stay stable across languages.
 
+Finding messages and remediations are translated in the terminal, Markdown, and HTML reports. JSON and SARIF deliberately keep the English source text so a report is byte-identical whichever language produced it — two findings that differ only by locale would otherwise break diffing, deduplication, and code-scanning ingestion. Two engine-consistency messages interpolate a value and remain English pending parameterised message keys.
+
 ### Profiles, locales, outputs, and thresholds
 
 | Concern | Supported values | Default / behavior |
@@ -243,15 +245,17 @@ flowchart LR
 | Custom rules | `implemented` as strict JSON registry with absence and explicit content-match modes |
 | Network link checks | `implemented` as opt-in bounded HTTP checks with internal-address blocking |
 | Portfolio dashboard | `implemented` as local JSON-to-HTML aggregation |
-| npm/package artifact | `published` as stable `reposentinel@1.0.0`; earlier prerelease artifacts remain historical |
+| npm/package artifact | `built and gated` as stable `reposentinel@1.1.0`; earlier artifacts remain historical |
 | VS Code diagnostics | `implemented` as optional local adapter; VSIX packaging verified |
-| npm publication | `published` as `reposentinel@1.0.0` under `latest`; clean registry install verified |
+| npm publication | `1.0.0` published under `latest`; `1.1.0` cut and gated, awaiting the maintainer-run release workflow |
 | VS Code Marketplace publication | `pending publisher identity and VSCE_PAT` |
-| Stable production | `published` as `1.0.0`; technical pilot and release gates verified |
+| Stable production | `1.0.0` published; `1.1.0` gated and ready to publish |
 
 ### Safety boundaries
 
-RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure. The built-in credential detector intentionally covers only documented high-confidence GitHub, Slack-token, AWS, Stripe, Google API, OpenAI, npm, and JWT-like prefixes; it does not claim coverage for every Azure, Slack webhook, connection string, or high-entropy secret format.
+RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure.
+
+The built-in credential detector covers ten documented high-confidence families: GitHub tokens (`ghp_`, `github_pat_`), Slack tokens (`xoxb-`, `xoxp-`), Slack incoming webhooks, AWS access keys (`AKIA`, `ASIA`), Stripe live keys (`sk_live_`, `rk_live_`), Google API keys (`AIza`), OpenAI keys (`sk-`, `sk-proj-`), npm tokens (`npm_`), structurally valid JWTs, and database connection strings with an inline password. Private-key detection covers PEM and PGP blocks. It does **not** cover Azure credentials, generic high-entropy strings, or any provider not listed here — a clean security result is evidence that these ten families were not found, not that the repository holds no secrets. Findings on test, fixture, and example paths are reported at `info` severity so throwaway test certificates do not mask production exposure.
 
 Configured ignore patterns prune files from the general scan. Repository `.gitignore` files remain visible as metadata, and local files matched only by repository `.gitignore` are isolated for security detectors so `.env`, key, and credential exposure can still be reported without sending their content to other rules. Aggregate file and byte budgets are bounded; when a limit is reached, reports expose `scanBudget.truncated: true` and the cached text-byte count instead of silently presenting a partial scan as complete.
 
@@ -298,7 +302,7 @@ RepoSentinel adalah developer tool local-first untuk memeriksa lapisan di sekita
 | **Profile-driven** | Repository `public`, `portfolio`, `npm-package`, `academic`, `private-team`, dan `mobile-app` dapat memakai konteks pemeriksaan yang berbeda. |
 | **Safe by default** | Scanner membaca repository sebagai data dan tidak menjalankan package script atau build command. |
 | **Bounded scan** | Aggregate file dan byte budget dilaporkan melalui `scanBudget.truncated: true` ketika scan harus berhenti lebih awal. |
-| **Multilingual** | UI dan dokumentasi dapat diterjemahkan tanpa mengubah rule ID dan schema machine output. |
+| **Multilingual** | Report terminal, Markdown, dan HTML menampilkan teks finding dalam bahasa yang dipilih. JSON dan SARIF tetap Inggris, sehingga rule ID, schema, dan finding machine-readable identik lintas locale. |
 
 ### Bahasa yang didukung
 
@@ -330,7 +334,7 @@ npm install --global reposentinel@latest
 reposentinel --version
 
 # Reproducible version-pinned install
-npm install --global reposentinel@1.0.0
+npm install --global reposentinel@1.1.0
 reposentinel check . --lang id
 
 # Or run from the workspace while contributing
@@ -388,7 +392,7 @@ Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, bor
 
 ### Status saat ini
 
-Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository sudah public setelah approval eksplisit maintainer untuk visibility public; stable npm dan GitHub release tersedia untuk semua pengguna.
+Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 27-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.1.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository sudah public setelah approval eksplisit maintainer untuk visibility public; stable npm dan GitHub release tersedia untuk semua pengguna.
 
 ---
 

@@ -4,6 +4,9 @@ profile: public
 ignore:
   # Positive security fixtures are validated by the stable matrix, not dogfood.
   - fixtures/**
+  # Corpus checkouts are other projects' repositories; their test certificates
+  # and fixtures are not this repository's exposure.
+  - .cache/**
   - node_modules/**
   - dist/**
   - coverage/**

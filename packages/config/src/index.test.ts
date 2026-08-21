@@ -63,4 +63,29 @@ describe("configuration", () => {
       severityOverride(loaded.config, "security.private-key", "warning"),
     ).toBe("critical");
   });
+
+  it("explains configuration mistakes without leaking schema internals", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-badconfig-"));
+    await writeFile(
+      join(root, ".reposentinel.yml"),
+      "profile: public\nbogus_key: 1\n",
+      "utf8",
+    );
+
+    await expect(loadConfig(root)).rejects.toThrow(/unknown key "bogus_key"/u);
+    await expect(loadConfig(root)).rejects.not.toThrow(/"code":/u);
+  });
+
+  it("names the accepted values for an invalid enum", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-badenum-"));
+    await writeFile(
+      join(root, ".reposentinel.yml"),
+      "profile: nonsense\n",
+      "utf8",
+    );
+
+    await expect(loadConfig(root)).rejects.toThrow(
+      /profile: expected one of .*"public"/u,
+    );
+  });
 });

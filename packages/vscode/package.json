@@ -3,7 +3,7 @@
   "private": true,
   "displayName": "RepoSentinel Diagnostics",
   "publisher": "kittodgg",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "VS Code diagnostics adapter for RepoSentinel JSON reports",
   "license": "MIT",
   "categories": [

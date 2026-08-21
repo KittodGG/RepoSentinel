@@ -1,10 +1,12 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const root = resolve(new URL("..", import.meta.url).pathname);
+// fileURLToPath, not URL.pathname: the latter yields "/C:/..." on Windows.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = resolve(
   process.env.REPOSENTINEL_CORPUS_MANIFEST ??
     join(root, "scripts/corpus-manifest.json"),
@@ -52,6 +54,11 @@ async function run(command, args, options = {}) {
 }
 
 async function ensureCheckout(repository, cache) {
+  // A canary entry ships with the repository instead of being cloned, so the
+  // gate can assert that detection still fires. Without it every assertion is
+  // an upper bound and a broken detector would make the corpus look greener.
+  if (repository.path) return resolve(root, repository.path);
+
   const checkout = join(cache, repository.name.replaceAll("/", "__"));
   const marker = join(checkout, ".reposentinel-corpus-commit");
   let currentCommit = "";
@@ -89,8 +96,14 @@ async function ensureCheckout(repository, cache) {
   return checkout;
 }
 
-async function scan(repository, checkout, limits) {
-  const reportPath = join(checkout, ".reposentinel-corpus-report.json");
+async function scan(repository, checkout, limits, cache) {
+  // Reports go to the cache, never into the checkout. A canary lives inside the
+  // repository, so writing beside it would leave build output in version
+  // control.
+  const reportPath = join(
+    cache,
+    `${repository.name.replaceAll("/", "__")}.report.json`,
+  );
   await rm(reportPath, { force: true });
   const started = performance.now();
   let exitCode = 0;
@@ -143,11 +156,47 @@ async function scan(repository, checkout, limits) {
   const reportBytes = (await stat(reportPath)).size;
   const score = Number(report.score ?? report.summary?.score ?? NaN);
   const failures = [];
-  if (!Number.isFinite(score) || score < repository.minScore)
+
+  // Positive control. `expect` names the detection floor a canary must keep
+  // meeting; falling below it means a detector regressed, which every
+  // upper-bound assertion below would happily report as an improvement.
+  if (repository.expect) {
+    const expected = repository.expect;
+    if (
+      typeof expected.minSecurityFindings === "number" &&
+      securityFindings.length < expected.minSecurityFindings
+    )
+      failures.push(
+        `security findings ${securityFindings.length} < expected ${expected.minSecurityFindings}`,
+      );
+    for (const [ruleId, minimum] of Object.entries(expected.rules ?? {})) {
+      const actual = findings.filter(
+        (finding) => finding?.ruleId === ruleId,
+      ).length;
+      if (actual < minimum)
+        failures.push(`${ruleId} fired ${actual}x < expected ${minimum}x`);
+    }
+    if (
+      typeof expected.maxScore === "number" &&
+      Number.isFinite(score) &&
+      score > expected.maxScore
+    )
+      failures.push(`score ${score} > expected max ${expected.maxScore}`);
+  }
+
+  if (
+    typeof repository.minScore === "number" &&
+    (!Number.isFinite(score) || score < repository.minScore)
+  )
     failures.push(
       `score ${Number.isFinite(score) ? score : "missing"} < ${repository.minScore}`,
     );
-  if (blockingSecurityFindings.length > limits.maxBlockingSecurityFindings)
+  // A canary is supposed to be full of planted secrets, so the blocking-finding
+  // ceiling applies to the real-world cohort only.
+  if (
+    !repository.expect &&
+    blockingSecurityFindings.length > limits.maxBlockingSecurityFindings
+  )
     failures.push(
       `blocking security findings ${blockingSecurityFindings.length} > ${limits.maxBlockingSecurityFindings}`,
     );
@@ -163,7 +212,7 @@ async function scan(repository, checkout, limits) {
     failures.push(`scanner exited ${exitCode}`);
   return {
     name: repository.name,
-    commit: repository.commit.slice(0, 12),
+    commit: repository.commit ? repository.commit.slice(0, 12) : "local",
     score: Number.isFinite(score) ? score : "n/a",
     findings: findings.length,
     security: securityFindings.length,
@@ -184,18 +233,22 @@ await mkdir(options.cache, { recursive: true });
 await run(process.execPath, [cliPath, "--version"]);
 const results = [];
 for (const repository of manifest.repositories) {
-  process.stdout.write(
-    `corpus ${repository.name}@${repository.commit.slice(0, 12)} ... `,
-  );
+  const label = repository.commit ? repository.commit.slice(0, 12) : "local";
+  process.stdout.write(`corpus ${repository.name}@${label} ... `);
   try {
     const checkout = await ensureCheckout(repository, options.cache);
-    const result = await scan(repository, checkout, manifest.limits);
+    const result = await scan(
+      repository,
+      checkout,
+      manifest.limits,
+      options.cache,
+    );
     results.push(result);
     console.log(result.failures.length === 0 ? "passed" : "failed");
   } catch (error) {
     const result = {
       name: repository.name,
-      commit: repository.commit.slice(0, 12),
+      commit: label,
       score: "n/a",
       findings: "n/a",
       security: "n/a",

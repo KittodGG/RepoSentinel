@@ -55,6 +55,33 @@ const rawConfigSchema = z
   })
   .strict();
 
+/**
+ * Turns Zod issues into operator-readable lines. The raw issue array is JSON
+ * that leaks schema internals, so configuration mistakes are reported as the
+ * key that is wrong and what it accepts instead.
+ */
+function describeConfigIssues(
+  path: string,
+  issues: z.core.$ZodIssue[],
+): string {
+  const lines = issues.map((issue) => {
+    const key = issue.path.join(".");
+    if (issue.code === "unrecognized_keys") {
+      return `  unknown key ${issue.keys.map((k) => `"${k}"`).join(", ")}`;
+    }
+    if (issue.code === "invalid_value") {
+      const allowed = issue.values.map((v) => `"${String(v)}"`).join(", ");
+      return `  ${key || "(root)"}: expected one of ${allowed}`;
+    }
+    return `  ${key || "(root)"}: ${issue.message}`;
+  });
+  return [
+    `Invalid configuration in ${path}:`,
+    ...lines,
+    'Run "reposentinel init --force" to regenerate a valid starter configuration.',
+  ].join("\n");
+}
+
 export type ConfigLoadResult = {
   config: ResolvedConfig;
   path?: string;
@@ -138,8 +165,11 @@ export async function loadConfig(
     return { config: defaultConfig(profileOverride) };
   }
   const source = await readFile(path, "utf8");
-  const parsed = rawConfigSchema.parse(parse(source) ?? {});
-  return { config: resolveConfig(root, parsed, profileOverride), path };
+  const result = rawConfigSchema.safeParse(parse(source) ?? {});
+  if (!result.success) {
+    throw new Error(describeConfigIssues(path, result.error.issues));
+  }
+  return { config: resolveConfig(root, result.data, profileOverride), path };
 }
 
 export function severityOverride(

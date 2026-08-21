@@ -6,7 +6,11 @@ import {
   type ScoreStatus,
   summarizeFindings,
 } from "@reposentinel/core";
-import { createTranslator, type Locale } from "@reposentinel/i18n";
+import {
+  createTranslator,
+  type Locale,
+  translateRuleText,
+} from "@reposentinel/i18n";
 import { createColors } from "picocolors";
 
 function statusMessageKey(
@@ -15,7 +19,8 @@ function statusMessageKey(
   | "status.ready"
   | "status.almostReady"
   | "status.needsAttention"
-  | "status.notReady" {
+  | "status.notReady"
+  | "status.notApplicable" {
   switch (status) {
     case "ready":
       return "status.ready";
@@ -25,16 +30,36 @@ function statusMessageKey(
       return "status.needsAttention";
     case "not-ready":
       return "status.notReady";
+    case "not-applicable":
+      return "status.notApplicable";
   }
   throw new Error(`Unknown score status: ${status}`);
 }
 
-function colorize(
-  enabled: boolean,
-  color: (value: string) => string,
-  value: string,
-): string {
-  return enabled ? color(value) : value;
+/**
+ * A readiness score is only meaningful when there was something to score. An
+ * empty target reports `not-applicable`, so the number is replaced by a dash
+ * rather than printing a misleading zero.
+ */
+function scoreLabel(summary: { score: number; status: ScoreStatus }): string {
+  return summary.status === "not-applicable" ? "n/a" : `${summary.score} / 100`;
+}
+
+/**
+ * Localizes the human-facing text of a finding. Applied by the terminal,
+ * Markdown, and HTML reporters only — JSON and SARIF keep the English source so
+ * machine-readable output stays byte-identical across locales.
+ */
+function localizeFinding(finding: Finding, locale: Locale): Finding {
+  if (locale === "en") return finding;
+  return {
+    ...finding,
+    message: translateRuleText(locale, finding.message),
+    remediation: translateRuleText(locale, finding.remediation),
+    ...(finding.evidence
+      ? { evidence: translateRuleText(locale, finding.evidence) }
+      : {}),
+  };
 }
 
 function code(value: string): string {
@@ -68,8 +93,80 @@ export type TerminalReportOptions = {
   network?: boolean;
   scanBudget?: ScanBudget | undefined;
   findingsTruncated?: boolean;
+  /** Drawing width; clamped to 56..100. Defaults to 80 so output stays stable. */
+  width?: number | undefined;
   color?: boolean;
 };
+
+/**
+ * Matches an ANSI SGR sequence. Built from the escape code point rather than a
+ * literal control character so the source stays copy-safe.
+ */
+const ESCAPE = String.fromCharCode(27);
+const ANSI = new RegExp(`${ESCAPE}${"\\["}[0-9;]*m`, "gu");
+
+/** Visible width of a string, ignoring colour escapes. */
+function visibleWidth(value: string): number {
+  return value.replace(ANSI, "").length;
+}
+
+function padVisible(value: string, width: number): string {
+  const pad = Math.max(0, width - visibleWidth(value));
+  return value + " ".repeat(pad);
+}
+
+/**
+ * Wraps text to a column budget without breaking words. Long unbreakable
+ * tokens — paths, redacted matches — are emitted on their own line rather than
+ * being split, so a value stays selectable in one go.
+ */
+function wrap(value: string, width: number): string[] {
+  if (width <= 0) return [value];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of value.split(/\s+/u).filter(Boolean)) {
+    if (current.length === 0) {
+      current = word;
+      continue;
+    }
+    if (current.length + 1 + word.length <= width) {
+      current = `${current} ${word}`;
+      continue;
+    }
+    lines.push(current);
+    current = word;
+  }
+  if (current.length > 0) lines.push(current);
+  return lines.length > 0 ? lines : [""];
+}
+
+const SEVERITY_ORDER = ["critical", "error", "warning", "info"] as const;
+
+const SEVERITY_MARK: Record<Finding["severity"], string> = {
+  critical: "✕",
+  error: "✕",
+  warning: "!",
+  info: "·",
+};
+
+/**
+ * Resolves the drawing width. Terminals narrower than the floor still render;
+ * they simply wrap more. The value is a parameter rather than a direct
+ * `process.stdout` read so snapshots stay stable regardless of the terminal
+ * running the suite.
+ */
+function resolveWidth(requested: number | undefined): number {
+  const raw = requested ?? 80;
+  return Math.max(56, Math.min(100, Math.trunc(raw)));
+}
+
+function gauge(score: number, cells: number): string {
+  const filled = Math.max(
+    0,
+    Math.min(cells, Math.round((score / 100) * cells)),
+  );
+  return "▰".repeat(filled) + "▱".repeat(cells - filled);
+}
 
 export function renderTerminalReport(options: TerminalReportOptions): string {
   const {
@@ -85,105 +182,170 @@ export function renderTerminalReport(options: TerminalReportOptions): string {
     network = false,
     scanBudget,
     findingsTruncated = false,
+    width: requestedWidth,
     color = true,
   } = options;
+
   const colors = createColors(color);
   const { t } = createTranslator(locale);
   const summary = summarizeFindings(findings, threshold);
-  const scoreColor =
-    summary.score >= 90
-      ? colors.green
-      : summary.score >= 75
-        ? colors.cyan
-        : colors.yellow;
-  const status = t(statusMessageKey(summary.status));
+  const width = resolveWidth(requestedWidth);
+  const inner = width - 6; // two-space gutter plus box borders
+  const notApplicable = summary.status === "not-applicable";
+
+  const accent =
+    notApplicable || summary.score < 50
+      ? colors.red
+      : summary.score < 75
+        ? colors.yellow
+        : summary.score < 90
+          ? colors.cyan
+          : colors.green;
+
+  const out: string[] = [];
+  const push = (line = "") => out.push(line);
+
+  // ---- masthead ------------------------------------------------------------
+  push();
+  push(`  ${colors.cyan("◈")} ${colors.bold(colors.white("RepoSentinel"))}`);
+  push(`    ${colors.dim(t("brand.tagline"))}`);
+  push();
+
+  const context = [
+    repository,
+    profile,
+    `network ${network ? "on" : "off"}`,
+    `locale ${locale}`,
+  ];
+  push(`    ${colors.dim(context.join("  ·  "))}`);
+  push();
+
+  // ---- score panel ---------------------------------------------------------
+  const status = t(statusMessageKey(summary.status)).toUpperCase();
+  const top = `╭${"─".repeat(inner)}╮`;
+  const bottom = `╰${"─".repeat(inner)}╯`;
+  const row = (content: string): string =>
+    `  ${colors.dim("│")} ${padVisible(content, inner - 1)}${colors.dim("│")}`;
+
+  push(`  ${colors.dim(top)}`);
+  if (notApplicable) {
+    push(row(`${accent(colors.bold("n/a"))}  ${colors.bold(accent(status))}`));
+  } else {
+    const bar = gauge(summary.score, Math.max(10, inner - 26));
+    push(
+      row(
+        `${accent(colors.bold(`${summary.score}`))}${colors.dim("/100")}  ${accent(bar)}  ${colors.bold(accent(status))}`,
+      ),
+    );
+  }
+  const facts = [
+    `${filesScanned} ${t("scan.files").toLocaleLowerCase(locale)}`,
+    `${ignoredCount} ${t("scan.ignored")
+      .toLocaleLowerCase(locale)
+      .replace(/^files?\s+/u, "")}`,
+    `${t("scan.failsOn")} ${threshold}`,
+  ];
+  push(row(colors.dim(facts.join(" · "))));
+  push(`  ${colors.dim(bottom)}`);
+  push();
+
+  // ---- counts --------------------------------------------------------------
+  const countColor: Record<(typeof SEVERITY_ORDER)[number], typeof colors.red> =
+    {
+      critical: colors.red,
+      error: colors.red,
+      warning: colors.yellow,
+      info: colors.cyan,
+    };
+  const counts = SEVERITY_ORDER.map((severity) => {
+    const value = summary.counts[severity];
+    const label = `${value} ${t(`finding.${severity}` as const)}`;
+    return value === 0 ? colors.dim(label) : countColor[severity](label);
+  });
+  push(`    ${counts.join("   ")}`);
+
+  // ---- scope notes ---------------------------------------------------------
+  const notes: string[] = [];
+  if (changedSince)
+    notes.push(
+      `${t("scan.changedScope")} ${changedSince} · ${changedFiles.length}`,
+    );
+  if (scanBudget?.truncated) notes.push(t("scan.boundedScan"));
+  if (findingsTruncated) notes.push(t("scan.truncatedOutput"));
+  if (notes.length > 0) {
+    push();
+    for (const note of notes)
+      push(`    ${colors.yellow("▲")} ${colors.dim(note)}`);
+  }
+  push();
+
+  // ---- findings, grouped by severity ---------------------------------------
+  if (findings.length === 0) {
+    push(`    ${colors.green("✓")} ${t("scan.noFindings")}`);
+  } else {
+    const localized = findings.map((finding) =>
+      localizeFinding(finding, locale),
+    );
+    for (const severity of SEVERITY_ORDER) {
+      const group = localized.filter(
+        (finding) => finding.severity === severity,
+      );
+      if (group.length === 0) continue;
+
+      const heading = t(`finding.${severity}` as const).toUpperCase();
+      const rule = "─".repeat(Math.max(0, width - heading.length - 5));
+      push();
+      push(`  ${countColor[severity](heading)} ${colors.dim(rule)}`);
+      push();
+
+      for (const finding of group) {
+        const location = finding.path
+          ? `${finding.path}${finding.line ? `:${finding.line}` : ""}`
+          : "repository";
+        const idWidth = Math.max(0, width - 7 - location.length - 2);
+        push(
+          `    ${countColor[severity](SEVERITY_MARK[severity])}  ${padVisible(colors.bold(finding.ruleId), idWidth)} ${colors.dim(location)}`,
+        );
+        for (const line of wrap(finding.message, width - 7))
+          push(`       ${line}`);
+
+        const detailLabel = Math.max(
+          visibleWidth(t("finding.evidenceLabel")),
+          visibleWidth(t("finding.fixLabel")),
+        );
+        const detail = (label: string, value: string): void => {
+          const body = wrap(value, width - 10 - detailLabel);
+          body.forEach((line, index) => {
+            const prefix =
+              index === 0
+                ? colors.dim(padVisible(label, detailLabel))
+                : " ".repeat(detailLabel);
+            push(`       ${prefix}  ${index === 0 ? line : colors.dim(line)}`);
+          });
+        };
+        if (finding.evidence)
+          detail(t("finding.evidenceLabel"), colors.dim(finding.evidence));
+        detail(t("finding.fixLabel"), colors.dim(finding.remediation));
+        push();
+      }
+    }
+  }
+
+  // ---- footer --------------------------------------------------------------
   const resultLabel =
     summary.exitCode === 1
       ? t("result.failed")
       : summary.counts.warning > 0
         ? t("result.passedWithWarnings")
         : t("result.passed");
-  const line = colors.dim(
-    "──────────────────────────────────────────────────────────────",
+  const scoreText = notApplicable ? "n/a" : `${summary.score}/100`;
+  push(`  ${colors.dim("─".repeat(width - 4))}`);
+  push(
+    `    ${accent(scoreText)}${colors.dim(` · ${t(statusMessageKey(summary.status))} · ${resultLabel} · ${t("scan.exitCode")} ${summary.exitCode}`)}`,
   );
-  const boxWidth = 63;
-  const boxTitle = "╭─ health snapshot ";
-  const boxTop = `${boxTitle}${"─".repeat(boxWidth - boxTitle.length - 1)}╮`;
-  const boxBottom = `╰${"─".repeat(boxWidth - 2)}╯`;
-  const boxRow = (value: string): string =>
-    `${`│ ${value}`.padEnd(boxWidth - 1, " ")}│`;
-  const output = [
-    `${colors.cyan("◈")} ${colors.bold(colors.white("RepoSentinel"))}`,
-    colors.dim(`  ${t("brand.tagline")}`),
-    "",
-    `${t("scan.repository")} : ${repository}`,
-    `${t("scan.profile")}    : ${profile}`,
-    `${t("scan.mode")}       : local · network ${network ? "on" : "off"} · locale ${locale}`,
-    ...(changedSince
-      ? [
-          `Scope      : changed since ${changedSince} · ${changedFiles.length} changed file(s)`,
-        ]
-      : []),
-    ...(scanBudget?.truncated
-      ? [
-          `Scan       : bounded at ${scanBudget.maxFiles} files / ${scanBudget.maxTotalBytes} bytes; some files were not read`,
-        ]
-      : []),
-    ...(findingsTruncated
-      ? ["Output     : findings were truncated by the report budget"]
-      : []),
-    "",
-    colors.blue(boxTop),
-    scoreColor(boxRow(`${summary.score} / 100   ${status.toUpperCase()}`)),
-    colors.dim(
-      boxRow(
-        `${filesScanned} files · ${ignoredCount} ignored · threshold ${threshold}`,
-      ),
-    ),
-    colors.blue(boxBottom),
-    "",
-    `${t("scan.findings")}  ${line}`,
-    `${colors.red("CRITICAL")} ${summary.counts.critical}   ${colors.red("ERROR")} ${summary.counts.error}   ${colors.yellow("WARNING")} ${summary.counts.warning}   ${colors.cyan("INFO")} ${summary.counts.info}`,
-  ];
+  push();
 
-  if (findings.length === 0) {
-    output.push(colors.green(`✓ ${t("scan.noFindings")}`));
-  } else {
-    for (const finding of findings) {
-      const marker =
-        finding.severity === "critical" || finding.severity === "error"
-          ? "×"
-          : finding.severity === "warning"
-            ? "!"
-            : "◇";
-      const markerColor =
-        finding.severity === "critical" || finding.severity === "error"
-          ? colors.red
-          : finding.severity === "warning"
-            ? colors.yellow
-            : colors.cyan;
-      const location = finding.path
-        ? `${finding.path}${finding.line ? `:${finding.line}` : ""}`
-        : "repository";
-      output.push(
-        "",
-        `${colorize(color, markerColor, marker)}  ${finding.ruleId}  ${location}  ${finding.severity}`,
-      );
-      output.push(`   ${finding.message}`);
-      if (finding.evidence)
-        output.push(`   ${colors.dim(`Evidence: ${finding.evidence}`)}`);
-      output.push(`   ${colors.dim(`Fix: ${finding.remediation}`)}`);
-    }
-  }
-
-  output.push(
-    "",
-    `${t("scan.score")}  : ${summary.score} / 100`,
-    `${t("scan.status")} : ${status}`,
-    `${t("scan.result")} : ${resultLabel}`,
-    `Exit code : ${summary.exitCode}`,
-  );
-  return `${output.join("\n")}\n`;
+  return `${out.join("\n")}\n`;
 }
 
 export function renderMarkdownReport(
@@ -205,6 +367,7 @@ export function renderMarkdownReport(
     options.findings.length === 0
       ? "No findings."
       : options.findings
+          .map((raw) => localizeFinding(raw, options.locale))
           .map((finding) =>
             [
               `### ${code(finding.ruleId)} — ${finding.severity}`,
@@ -244,7 +407,7 @@ export function renderMarkdownReport(
           `- Changed files: ${code(String(options.changedFiles?.length ?? 0))}`,
         ]
       : []),
-    `- Score: ${code(`${summary.score} / 100`)}`,
+    `- Score: ${code(scoreLabel(summary))}`,
     `- Status: ${code(summary.status)}`,
     "",
     "## Summary",
@@ -284,7 +447,10 @@ export function renderHtmlReport(
   const rows =
     options.findings.length === 0
       ? `<tr><td colspan="4" class="empty">No findings. The repository passed this scan.</td></tr>`
-      : options.findings.map(htmlFindingRow).join("\n");
+      : options.findings
+          .map((raw) => localizeFinding(raw, options.locale))
+          .map(htmlFindingRow)
+          .join("\n");
   const changedScope = options.changedSince
     ? `<div class="scope"><span>Changed-files mode</span><code>${escapeHtml(options.changedSince)}</code><span>${options.changedFiles?.length ?? 0} changed file(s)</span></div>`
     : "";
@@ -303,7 +469,7 @@ export function renderHtmlReport(
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 12% 0%,#102d49 0,#07111f 42%,#11102b 100%);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);padding:32px}main{max-width:1160px;margin:0 auto}.brand{display:flex;align-items:center;gap:12px;color:var(--cyan);font:700 22px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.brand span{color:var(--text)}.sub{color:var(--muted);margin:4px 0 28px}.hero{border:1px solid #245276;background:linear-gradient(135deg,#0b1930,#11102b);border-radius:18px;padding:26px;box-shadow:0 18px 60px #0006}.meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.meta code,.scope code{color:var(--cyan);background:#07111f;border:1px solid #245276;border-radius:6px;padding:3px 7px}.score{display:flex;align-items:end;gap:16px;margin-top:22px}.score strong{font:700 48px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:${summary.score >= 90 ? "var(--green)" : summary.score >= 75 ? "var(--cyan)" : "var(--yellow)"}}.status{font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${summary.status === "ready" ? "var(--green)" : "var(--yellow)"}}.scope{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px;border-left:3px solid var(--violet);padding:8px 12px;background:#11102b;color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}.stat{padding:12px 14px;background:#07111f;border:1px solid #1d3b58;border-radius:10px}.stat b{display:block;font:700 22px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.critical b,.error b{color:var(--red)}.warning b{color:var(--yellow)}.info b{color:var(--cyan)}section{margin-top:24px}h2{font-size:18px;margin:0 0 10px;color:var(--cyan)}.table-wrap{overflow:auto;border:1px solid #245276;border-radius:12px}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;vertical-align:top;padding:13px 14px;border-bottom:1px solid #1d3b58}th{background:#0f2740;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.severity{display:inline-block;border-radius:999px;padding:2px 8px;font:700 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:uppercase}.severity-critical,.severity-error{background:#4b1d2b;color:var(--red)}.severity-warning{background:#463915;color:var(--yellow)}.severity-info{background:#123b4a;color:var(--cyan)}.muted,.fix{color:var(--muted)}.fix{font-size:13px}.empty{text-align:center;color:var(--green);padding:28px}.note{color:var(--muted);font-size:13px;margin-top:18px;border-top:1px solid #1d3b58;padding-top:14px}@media(max-width:700px){body{padding:16px}.stats{grid-template-columns:repeat(2,1fr)}.score strong{font-size:38px}}
 </style>
 </head>
-<body><main><div class="brand">◈ <span>RepoSentinel</span></div><div class="sub">Repository readiness, without the noise.</div><div class="hero"><div class="meta"><span>Repository <code>${escapeHtml(options.repository)}</code></span><span>Profile <code>${escapeHtml(options.profile)}</code></span><span>Locale <code>${escapeHtml(options.locale)}</code></span><span>Threshold <code>${escapeHtml(options.threshold)}</code></span><span>Network <code>${escapeHtml(options.network ? "enabled (opt-in)" : "disabled")}</code></span>${options.scanBudget?.truncated ? `<span>Scan <code>bounded</code></span>` : ""}</div><div class="score"><strong>${summary.score}/100</strong><span class="status">${escapeHtml(summary.status)}</span></div>${changedScope}${truncationNote}<div class="stats"><div class="stat critical"><b>${summary.counts.critical}</b>Critical</div><div class="stat error"><b>${summary.counts.error}</b>Error</div><div class="stat warning"><b>${summary.counts.warning}</b>Warning</div><div class="stat info"><b>${summary.counts.info}</b>Info</div></div></div><section><h2>Findings</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message and remediation</th></tr></thead><tbody>${rows}</tbody></table></div></section><p class="note">This report is generated locally.${options.scanBudget?.truncated ? " The scan was bounded and some files were not read." : ""} A readiness score is not proof of security or a substitute for a formal security audit.</p></main></body></html>\n`;
+<body><main><div class="brand">◈ <span>RepoSentinel</span></div><div class="sub">Repository readiness, without the noise.</div><div class="hero"><div class="meta"><span>Repository <code>${escapeHtml(options.repository)}</code></span><span>Profile <code>${escapeHtml(options.profile)}</code></span><span>Locale <code>${escapeHtml(options.locale)}</code></span><span>Threshold <code>${escapeHtml(options.threshold)}</code></span><span>Network <code>${escapeHtml(options.network ? "enabled (opt-in)" : "disabled")}</code></span>${options.scanBudget?.truncated ? `<span>Scan <code>bounded</code></span>` : ""}</div><div class="score"><strong>${summary.status === "not-applicable" ? "n/a" : `${summary.score}/100`}</strong><span class="status">${escapeHtml(summary.status)}</span></div>${changedScope}${truncationNote}<div class="stats"><div class="stat critical"><b>${summary.counts.critical}</b>Critical</div><div class="stat error"><b>${summary.counts.error}</b>Error</div><div class="stat warning"><b>${summary.counts.warning}</b>Warning</div><div class="stat info"><b>${summary.counts.info}</b>Info</div></div></div><section><h2>Findings</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message and remediation</th></tr></thead><tbody>${rows}</tbody></table></div></section><p class="note">This report is generated locally.${options.scanBudget?.truncated ? " The scan was bounded and some files were not read." : ""} A readiness score is not proof of security or a substitute for a formal security audit.</p></main></body></html>\n`;
 }
 
 export function renderJsonReport(

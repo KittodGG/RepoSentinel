@@ -56,7 +56,7 @@ import {
 import { Command } from "commander";
 import pc from "picocolors";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const profiles = [
   "public",
   "portfolio",
@@ -99,6 +99,16 @@ function colorize(
   value: string,
 ): string {
   return enabled ? color(value) : value;
+}
+
+/**
+ * Terminal width for the report layout. Only an interactive stdout supplies it;
+ * piped and file output keep the reporter default so a captured report is
+ * identical regardless of the terminal that produced it.
+ */
+function resolveWidth(writingToFile: boolean): number | undefined {
+  if (writingToFile || !process.stdout.isTTY) return undefined;
+  return process.stdout.columns;
 }
 
 function resolveColor(
@@ -306,64 +316,36 @@ async function runCheck(
           changedFiles: scan.changedFiles ?? [],
         }
       : {};
+    // One shared option object for every reporter. Building each call site
+    // separately previously let `findingsTruncated` reach only the Markdown
+    // reporter, so JSON and SARIF reported a complete inventory after the
+    // output budget had dropped findings.
+    const reportOptions = {
+      locale,
+      repository: basename(scan.root),
+      profile,
+      findings: scan.findings,
+      findingsTruncated: scan.findingsTruncated,
+      threshold,
+      network: scan.context.config.security.network,
+      scanBudget: scan.context.scanBudget,
+      ...changedOptions,
+    };
     const renderReport = (format: OutputFormat): string =>
       format === "json"
-        ? renderJsonReportExternal({
-            locale,
-            repository: basename(scan.root),
-            profile,
-            findings: scan.findings,
-            threshold,
-            network: scan.context.config.security.network,
-            scanBudget: scan.context.scanBudget,
-            ...changedOptions,
-          })
+        ? renderJsonReportExternal(reportOptions)
         : format === "markdown"
-          ? renderMarkdownReportExternal({
-              locale,
-              repository: basename(scan.root),
-              profile,
-              findings: scan.findings,
-              findingsTruncated: scan.findingsTruncated,
-              threshold,
-              network: scan.context.config.security.network,
-              scanBudget: scan.context.scanBudget,
-              ...changedOptions,
-            })
+          ? renderMarkdownReportExternal(reportOptions)
           : format === "sarif"
-            ? renderSarifReportExternal({
-                locale,
-                repository: basename(scan.root),
-                profile,
-                findings: scan.findings,
-                threshold,
-                network: scan.context.config.security.network,
-                scanBudget: scan.context.scanBudget,
-                ...changedOptions,
-              })
+            ? renderSarifReportExternal(reportOptions)
             : format === "html"
-              ? renderHtmlReportExternal({
-                  locale,
-                  repository: basename(scan.root),
-                  profile,
-                  findings: scan.findings,
-                  threshold,
-                  network: scan.context.config.security.network,
-                  scanBudget: scan.context.scanBudget,
-                  ...changedOptions,
-                })
+              ? renderHtmlReportExternal(reportOptions)
               : renderTerminalReportExternal({
-                  locale,
-                  repository: basename(scan.root),
-                  profile,
+                  ...reportOptions,
                   filesScanned: scan.context.files.length,
                   ignoredCount: scan.context.ignoredCount,
-                  findings: scan.findings,
-                  threshold,
-                  ...changedOptions,
-                  network: scan.context.config.security.network,
-                  scanBudget: scan.context.scanBudget,
                   color: resolveColor(options.color, Boolean(options.output)),
+                  width: resolveWidth(Boolean(options.output)),
                 });
     if (options.output) {
       const reportPath = resolve(options.output);

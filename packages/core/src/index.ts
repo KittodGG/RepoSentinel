@@ -101,7 +101,8 @@ export type ScoreStatus =
   | "ready"
   | "almost-ready"
   | "needs-attention"
-  | "not-ready";
+  | "not-ready"
+  | "not-applicable";
 
 export type ScanSummary = {
   score: number;
@@ -204,6 +205,13 @@ export function scoreFindings(findings: readonly Finding[]): number {
   return Math.max(0, Math.min(100, 100 - penalty));
 }
 
+/**
+ * Rule ID emitted when a target holds nothing the rule pack can judge. A
+ * readiness score over zero scannable files is meaningless, so its presence
+ * switches the summary to `not-applicable` instead of reporting a number.
+ */
+export const EMPTY_TARGET_RULE_ID = "scan.empty-target";
+
 export function statusForScore(score: number): ScoreStatus {
   if (score >= 90) return "ready";
   if (score >= 75) return "almost-ready";
@@ -244,6 +252,14 @@ export function summarizeFindings(
   findings: readonly Finding[],
   threshold: ExitThreshold,
 ): ScanSummary {
+  if (findings.some((finding) => finding.ruleId === EMPTY_TARGET_RULE_ID)) {
+    return {
+      score: 0,
+      status: "not-applicable",
+      counts: countsForFindings(findings),
+      exitCode: exitCodeForFindings(findings, threshold),
+    };
+  }
   const score = scoreFindings(findings);
   return {
     score,

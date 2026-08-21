@@ -177,6 +177,9 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
+      '@reposentinel/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
