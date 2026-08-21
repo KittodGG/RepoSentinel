@@ -106,6 +106,99 @@ describe("rules", () => {
     expect(JSON.stringify(result)).not.toContain("secret material");
   });
 
+  it("checks package structure and lockfile importers", () => {
+    const files = [
+      file("package.json"),
+      file("packages/cli/package.json"),
+      file("pnpm-lock.yaml"),
+    ];
+    const complete = runRules(
+      context("public", files, {
+        "package.json": JSON.stringify({
+          private: true,
+          packageManager: "pnpm@10.15.0",
+          engines: { node: ">=24" },
+        }),
+        "packages/cli/package.json": JSON.stringify({
+          name: "demo",
+          private: false,
+          files: ["dist"],
+          exports: { ".": "./dist/index.js" },
+          engines: { node: ">=24" },
+        }),
+        "pnpm-lock.yaml":
+          "lockfileVersion: '9.0'\nimporters:\n  packages/cli:\n",
+      }),
+    );
+    expect(
+      complete.some((finding) =>
+        finding.ruleId.startsWith("package.manifest-"),
+      ),
+    ).toBe(false);
+    expect(
+      complete.some((finding) => finding.ruleId === "package.lockfile-sync"),
+    ).toBe(false);
+
+    const incomplete = runRules(
+      context("public", files, {
+        "package.json": JSON.stringify({
+          private: true,
+          packageManager: "pnpm@10.15.0",
+          engines: { node: ">=24" },
+        }),
+        "packages/cli/package.json": JSON.stringify({
+          name: "demo",
+          private: false,
+        }),
+        "pnpm-lock.yaml": "lockfileVersion: '9.0'\nimporters:\n",
+      }),
+    );
+    expect(incomplete.map((finding) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        "package.manifest-exports",
+        "package.manifest-files",
+        "package.manifest-engines",
+        "package.lockfile-sync",
+      ]),
+    );
+  });
+
+  it("flags mutable actions and privileged pull-request checkouts", () => {
+    const action = "actions/checkout@v7";
+    const source = `name: Unsafe\non:\n  pull_request_target:\npermissions: read-all\njobs:\n  build:\n    steps:\n      - uses: ${action}\n        with:\n          ref: \${{ github.event.pull_request.head.sha }}`;
+    const findings = runRules(
+      context("public", [file(".github/workflows/unsafe.yml")], {
+        ".github/workflows/unsafe.yml": source,
+      }),
+    );
+    expect(findings.map((finding) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        "ci.action-sha-pinned",
+        "ci.pull-request-target-safety",
+      ]),
+    );
+    expect(
+      findings.find(
+        (finding) => finding.ruleId === "ci.pull-request-target-safety",
+      )?.severity,
+    ).toBe("critical");
+  });
+
+  it("accepts a complete pinned workflow security configuration", () => {
+    const source = `name: Safe\non:\n  pull_request:\npermissions:\n  contents: read\njobs:\n  build:\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1`;
+    const findings = runRules(
+      context("public", [file(".github/workflows/safe.yml")], {
+        ".github/workflows/safe.yml": source,
+      }),
+    );
+    expect(findings.map((finding) => finding.ruleId)).not.toContain(
+      "ci.action-sha-pinned",
+    );
+    expect(findings.map((finding) => finding.ruleId)).not.toContain(
+      "ci.pull-request-target-safety",
+    );
+  });
+
   it("keeps the MVP rule pack at or above fifteen rules", () => {
     expect(rules.length).toBeGreaterThanOrEqual(15);
   });

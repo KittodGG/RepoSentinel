@@ -197,13 +197,15 @@ export function redactSensitiveValue(value: string): string {
       "[REDACTED PRIVATE KEY]",
     );
   }
-  if (
-    /\b(?:ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_-]{8,}/u.test(value)
-  ) {
-    return value.replace(
-      /\b(ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_-]{8,}/gu,
-      "$1****[REDACTED]",
-    );
+  const credentialPattern =
+    /\b(github_pat_|sk-proj-|sk_live_|rk_live_|ghp_|xoxb-|xoxp-|AIza|AKIA|ASIA|npm_|sk-)[A-Za-z0-9_-]{16,}/u;
+  if (credentialPattern.test(value)) {
+    return value.replace(credentialPattern, "$1****[REDACTED]");
+  }
+  const jwtPattern =
+    /\b(eyJ)[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/u;
+  if (jwtPattern.test(value)) {
+    return value.replace(jwtPattern, "$1****[REDACTED]");
   }
   return "[REDACTED]";
 }

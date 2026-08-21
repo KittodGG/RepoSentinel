@@ -119,6 +119,60 @@ function isLikelyGeneratedPath(path: string): boolean {
   );
 }
 
+type JsonRecord = Record<string, unknown>;
+
+type PackageManifestEntry = {
+  path: string;
+  source: string;
+  data: JsonRecord | undefined;
+};
+
+function packageManifestEntries(
+  context: RepositoryContext,
+): PackageManifestEntry[] {
+  return context.files
+    .filter(
+      (file) =>
+        !file.isIgnored &&
+        file.relativePath.endsWith("package.json") &&
+        context.textCache.has(file.relativePath),
+    )
+    .map((file) => {
+      const source = context.textCache.get(file.relativePath) ?? "";
+      try {
+        const parsed: unknown = JSON.parse(source);
+        return {
+          path: file.relativePath,
+          source,
+          data:
+            typeof parsed === "object" &&
+            parsed !== null &&
+            !Array.isArray(parsed)
+              ? (parsed as JsonRecord)
+              : undefined,
+        };
+      } catch {
+        return { path: file.relativePath, source, data: undefined };
+      }
+    });
+}
+
+function workflowFiles(context: RepositoryContext): Array<{
+  path: string;
+  source: string;
+}> {
+  return context.files
+    .filter(
+      (file) =>
+        !file.isIgnored &&
+        /^\.github\/workflows\/[^/]+\.(yml|yaml)$/u.test(file.relativePath),
+    )
+    .map((file) => ({
+      path: file.relativePath,
+      source: context.textCache.get(file.relativePath) ?? "",
+    }));
+}
+
 export type { CustomRuleSpec } from "./custom.js";
 export { loadCustomRules } from "./custom.js";
 export type { NetworkLinkCheckOptions } from "./network.js";
@@ -337,6 +391,150 @@ export const rules: readonly RuleDefinition[] = [
               }),
             );
           }
+        }
+      }
+      return findings;
+    },
+  },
+  {
+    id: "package.manifest-exports",
+    category: "package",
+    title: "Publishable package exposes an entrypoint",
+    defaultSeverity: "warning",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      return packageManifestEntries(context).flatMap((entry) => {
+        if (!entry.data || entry.data.private === true) return [];
+        const hasExports = entry.data.exports !== undefined;
+        const hasEntrypoint =
+          typeof entry.data.main === "string" ||
+          (typeof entry.data.bin === "object" && entry.data.bin !== null);
+        return hasExports || hasEntrypoint
+          ? []
+          : [
+              finding(this, context, {
+                path: entry.path,
+                message:
+                  "Publishable package.json does not define an exports or executable entrypoint.",
+                remediation:
+                  "Add an explicit exports map or a documented main/bin entrypoint before publishing.",
+              }),
+            ];
+      });
+    },
+  },
+  {
+    id: "package.manifest-files",
+    category: "package",
+    title: "Publishable package allowlists build output",
+    defaultSeverity: "warning",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      return packageManifestEntries(context).flatMap((entry) => {
+        if (!entry.data || entry.data.private === true) return [];
+        const files = entry.data.files;
+        const includesDist =
+          Array.isArray(files) &&
+          files.some(
+            (item) =>
+              typeof item === "string" &&
+              (item === "dist" || item.startsWith("dist/")),
+          );
+        return includesDist
+          ? []
+          : [
+              finding(this, context, {
+                path: entry.path,
+                message:
+                  "Publishable package.json does not allowlist its dist output.",
+                evidence: "files must include dist",
+                remediation:
+                  "Add dist to the package files allowlist and keep source-only or local files out of the artifact.",
+              }),
+            ];
+      });
+    },
+  },
+  {
+    id: "package.manifest-engines",
+    category: "package",
+    title: "Publishable package engine requirement is consistent",
+    defaultSeverity: "warning",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      const root = packageManifestEntries(context).find(
+        (entry) => entry.path === "package.json",
+      );
+      const rootNode =
+        typeof root?.data?.engines === "object" && root.data.engines !== null
+          ? (root.data.engines as JsonRecord).node
+          : undefined;
+      if (typeof rootNode !== "string") return [];
+      return packageManifestEntries(context).flatMap((entry) => {
+        if (!entry.data || entry.data.private === true) return [];
+        const engines = entry.data.engines;
+        const node =
+          typeof engines === "object" && engines !== null
+            ? (engines as JsonRecord).node
+            : undefined;
+        return node === rootNode
+          ? []
+          : [
+              finding(this, context, {
+                path: entry.path,
+                message:
+                  "Publishable package.json has a Node.js engine range inconsistent with the workspace root.",
+                evidence: `root ${String(rootNode)}; package ${typeof node === "string" ? node : "missing"}`,
+                remediation: `Set engines.node to ${rootNode} or document why the package intentionally targets a different runtime.`,
+              }),
+            ];
+      });
+    },
+  },
+  {
+    id: "package.lockfile-sync",
+    category: "package",
+    title: "Package manifests have matching lockfile importers",
+    defaultSeverity: "warning",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      const root = packageManifestEntries(context).find(
+        (entry) => entry.path === "package.json",
+      );
+      const manager = root?.data?.packageManager;
+      const lockfile =
+        typeof manager === "string" && manager.startsWith("pnpm@")
+          ? "pnpm-lock.yaml"
+          : typeof manager === "string" && manager.startsWith("yarn@")
+            ? "yarn.lock"
+            : "package-lock.json";
+      const lockSource = context.textCache.get(lockfile);
+      if (!lockSource) {
+        return [
+          finding(this, context, {
+            path: lockfile,
+            message: `The declared package manager is missing ${lockfile}.`,
+            remediation:
+              "Regenerate and commit the lockfile with the declared package manager before publishing or enabling CI installs.",
+          }),
+        ];
+      }
+      if (lockfile !== "pnpm-lock.yaml") return [];
+      const findings: Finding[] = [];
+      for (const entry of packageManifestEntries(context)) {
+        if (!entry.path.startsWith("packages/")) continue;
+        const importer = entry.path.slice(0, -"/package.json".length);
+        if (!lockSource.includes(`  ${importer}:`)) {
+          findings.push(
+            finding(this, context, {
+              path: entry.path,
+              message:
+                "Workspace package is missing from pnpm-lock.yaml importers.",
+              evidence: importer,
+              remediation:
+                "Run pnpm install with the intended workspace package manifests and commit the updated lockfile.",
+            }),
+          );
         }
       }
       return findings;
@@ -720,6 +918,65 @@ export const rules: readonly RuleDefinition[] = [
                 "Add an issue template when accepting public bug reports or feature requests.",
             }),
           ];
+    },
+  },
+  {
+    id: "ci.action-sha-pinned",
+    category: "ci",
+    title: "Third-party workflow actions are pinned",
+    defaultSeverity: "warning",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      const pinPattern = /^\s*(?:-\s*)?uses:\s*([^\s#]+)@([^\s#]+)/u;
+      return workflowFiles(context).flatMap(({ path, source }) =>
+        source.split(/\r?\n/u).flatMap((line, index) => {
+          const match = line.match(pinPattern);
+          const reference = match?.[2] ?? "";
+          if (
+            !match ||
+            match[1]?.startsWith("./") ||
+            reference.match(/^[a-f0-9]{40}$/iu)
+          )
+            return [];
+          return [
+            finding(this, context, {
+              path,
+              line: index + 1,
+              message: "Workflow action is not pinned to a full commit SHA.",
+              evidence: match[1] ?? "unknown action",
+              remediation:
+                "Pin third-party actions to a verified 40-character commit SHA and keep the version in a comment.",
+            }),
+          ];
+        }),
+      );
+    },
+  },
+  {
+    id: "ci.pull-request-target-safety",
+    category: "ci",
+    title: "pull_request_target does not execute unchecked pull-request code",
+    defaultSeverity: "critical",
+    profiles: ["public", "npm-package"],
+    run(context) {
+      return workflowFiles(context).flatMap(({ path, source }) => {
+        const hasTargetTrigger = /^\s*pull_request_target\s*:/mu.test(source);
+        const checksOutPullRequestCode =
+          /uses:\s*actions\/checkout@[^\s]+[\s\S]{0,500}ref:\s*\$\{\{[^}]*pull_request/iu.test(
+            source,
+          );
+        return hasTargetTrigger && checksOutPullRequestCode
+          ? [
+              finding(this, context, {
+                path,
+                message:
+                  "pull_request_target checks out pull-request code in a privileged workflow.",
+                remediation:
+                  "Avoid checking out or executing untrusted pull-request code from pull_request_target; use pull_request or a trusted, reviewable workflow boundary.",
+              }),
+            ]
+          : [];
+      });
     },
   },
   {
