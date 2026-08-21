@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { runNpm } from "./lib/npm.mjs";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -19,21 +20,24 @@ const tarball = join(
 const installDir = await mkdtemp(join(tmpdir(), "reposentinel-npm-smoke-"));
 
 try {
-  const archive = await execFileAsync("tar", [
-    "-xzf",
-    tarball,
-    "-C",
-    installDir,
-  ]);
-  void archive;
-  const installedPackage = join(installDir, "package");
+  // Installing the tarball is both the extraction step and the smoke test: it
+  // is exactly what a consumer runs. Shelling out to tar meant GNU tar read the
+  // drive letter in a Windows path as a remote host and refused the archive.
+  await runNpm(
+    [
+      "install",
+      tarball,
+      "--prefix",
+      installDir,
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+    ],
+    { cwd: installDir },
+  );
+  const installedPackage = join(installDir, "node_modules", packageJson.name);
   const installedManifest = JSON.parse(
     await readFile(join(installedPackage, "package.json"), "utf8"),
-  );
-  await execFileAsync(
-    "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund"],
-    { cwd: installedPackage, maxBuffer: 4 * 1024 * 1024 },
   );
   if (installedManifest.private)
     throw new Error("Published package must not be private");

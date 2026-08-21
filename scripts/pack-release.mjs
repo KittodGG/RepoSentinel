@@ -1,10 +1,8 @@
-import { execFile } from "node:child_process";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { runNpm } from "./lib/npm.mjs";
 
-const execFileAsync = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = join(root, "packages", "cli");
 const artifactDir = join(root, "artifacts");
@@ -32,12 +30,7 @@ await writeFile(
   `${JSON.stringify(packageJson, null, 2)}\n`,
 );
 
-await execFileAsync(
-  "npm",
-  ["pack", "--ignore-scripts", "--pack-destination", artifactDir],
-  {
-    cwd: staging,
-    maxBuffer: 2 * 1024 * 1024,
-  },
-);
+await runNpm(["pack", "--ignore-scripts", "--pack-destination", artifactDir], {
+  cwd: staging,
+});
 console.log(`Release artifact created in ${artifactDir}`);

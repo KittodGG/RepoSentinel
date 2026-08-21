@@ -37,6 +37,11 @@ All notable changes to RepoSentinel are documented here. Version `1.1.0` is the 
 - Propagated truncation state through terminal, Markdown, JSON, SARIF, and HTML reports, including the machine-readable JSON schema. The reporters each accepted the flag, but the CLI passed it to the Markdown reporter only, so JSON and SARIF reported a complete inventory after the budget had dropped findings. All five now share one option object.
 - Reported `not-applicable` instead of a readiness score when a target holds no scannable files. An empty directory previously scored 80/100 by collecting presence findings for files that could not exist.
 
+### Release tooling
+
+- Made the packaging and release-gate scripts run on Windows. `execFile("npm")` fails there because npm is `npm.cmd`, and Node refuses to spawn a `.cmd` without a shell, so `pnpm release:gate` could not run outside CI. A shared helper now handles the platform difference in one place.
+- Dropped the `tar` shell-out from the release gate in favour of installing the tarball directly. GNU tar read the drive letter in a Windows path as a remote host and refused the archive; installing the tarball is also a more faithful smoke test, since it is what a consumer actually runs.
+
 ### Configuration
 
 - Replaced the raw Zod issue dump on invalid `.reposentinel.yml` with operator-readable lines that name the offending key and its accepted values.
