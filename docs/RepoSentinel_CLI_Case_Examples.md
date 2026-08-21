@@ -1,12 +1,12 @@
 # RepoSentinel — Contoh Semua Case dan Tampilan CLI
 
-**Status dokumen:** `verified stable-release candidate contract + illustrative UX examples`
+**Status dokumen:** `verified stable-release contract + illustrative UX examples`
 **Visual UI addendum:** [RepoSentinel — Visual & Interactive CLI Specification](./RepoSentinel_CLI_Visual_Interaction_Spec.md)  
-**Status produk:** `verified stable-release candidate; examples may include illustrative target-UX transcripts`
+**Status produk:** `verified stable release 1.0.0; examples may include illustrative target-UX transcripts`
 **Bahasa output:** Penjelasan pengguna menggunakan Bahasa Indonesia; command, rule ID, konfigurasi, dan istilah teknis tetap dalam Bahasa Inggris.  
 **Positioning:** *RepoSentinel — cek repository Anda sebelum orang lain menilainya.*
 
-> **Penting:** RepoSentinel memiliki stable-release candidate dan command yang berstatus `Implemented` sudah diuji. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; gunakan README dan implementation execution map sebagai source untuk status aktual.
+> **Penting:** RepoSentinel memiliki stable release 1.0.0 dan command yang berstatus `Implemented` sudah diuji. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; gunakan README dan implementation execution map sebagai source untuk status aktual.
 
 ## 1. Tujuan Dokumen
 
@@ -52,7 +52,7 @@ Format severity dan exit behavior mengikuti severity model RepoSentinel: `critic
 | `reposentinel check --network` | Mengaktifkan bounded HTTP link checks secara eksplisit. | Implemented; default tetap off |
 | `reposentinel dashboard <report-dir>` | Menggabungkan local JSON reports menjadi portfolio HTML dashboard. | Implemented |
 
-Command berstatus `Implemented` di atas adalah kontrak beta yang sudah dibangun dan diuji. Network tetap opt-in, watch memiliki debounce serta CI fallback, dan dashboard hanya membaca normalized JSON report lokal.
+Command berstatus `Implemented` di atas adalah kontrak stable yang sudah dibangun dan diuji. Network tetap opt-in, watch memiliki debounce serta CI fallback, dan dashboard hanya membaca normalized JSON report lokal.
 
 ## 4. Case A — Bantuan dan Versi CLI
 
@@ -971,7 +971,7 @@ Supported formats:
   json
   sarif
 
-Note: HTML report tersedia sebagai self-contained offline report pada stable-release candidate contract.
+Note: HTML report tersedia sebagai self-contained offline report pada stable-release contract.
 ```
 
 **Exit code:** `2`.

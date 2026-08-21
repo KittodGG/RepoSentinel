@@ -66,9 +66,9 @@ Workstream B mencakup integrasi `.gitignore` dan resource budget, semantics `ext
 
 ## Release decision / Keputusan release
 
-The current tree is **not yet stable-ready** solely because the existing candidate gates pass. It still needs Workstream A, Workstream B, pilot validation, and a final release review. The current repository must remain private during this process. After a stable version is published and all active documentation is free from beta status wording, the maintainer may separately approve the visibility change to public.
+The current tree has completed Workstream A, Workstream B, pilot validation, and final release review. Stable `reposentinel@1.0.0` is published on npm, the clean registry install smoke test passes, and the remaining GitHub release record is being finalized from the verified source commit. The repository remains private by maintainer choice; public visibility requires a separate explicit approval.
 
-Current tree **belum stable-ready** hanya karena candidate gate yang ada sudah lulus. Workstream A, Workstream B, pilot validation, dan final release review masih diperlukan. Repository harus tetap private selama proses ini. Setelah stable version dipublish dan seluruh dokumentasi aktif bebas dari wording beta, maintainer dapat secara terpisah menyetujui perubahan visibility menjadi public.
+Current tree telah menyelesaikan Workstream A, Workstream B, pilot validation, dan final release review. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan clean registry install smoke test berhasil; GitHub release record sedang difinalkan dari source commit yang terverifikasi. Repository tetap private berdasarkan keputusan maintainer; visibility public memerlukan approval eksplisit terpisah.
 
 ## References
 

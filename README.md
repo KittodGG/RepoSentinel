@@ -2,7 +2,7 @@
 
 ![RepoSentinel banner](docs/assets/reposentinel-banner.svg)
 
-[![Status: stable release candidate](https://img.shields.io/badge/status-stable--candidate-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RELEASE_READINESS.md)
+[![Status: stable](https://img.shields.io/badge/status-stable-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RELEASE_READINESS.md)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RepoSentinel_Project_Context.md)
 [![Languages: EN%20%7C%20ID](https://img.shields.io/badge/languages-EN%20%7C%20ID-a78bfa?style=for-the-badge&labelColor=11102b)](docs/TECH_STACK_DECISIONS.md)
 
@@ -13,11 +13,11 @@
 
 </div>
 
-> **Release status / Status rilis:** RepoSentinel is a verified **stable release candidate**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, and documentation are implemented and validated. The stable candidate is prepared as `reposentinel@1.0.0`; earlier prerelease versions remain historical release records only. Technical pilot validation is complete, while final stable publication and visibility approval remain explicit maintainer decisions.
+> **Release status / Status rilis:** RepoSentinel is a verified **stable release**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, documentation, hardening checks, and technical pilot validation are implemented and verified. `reposentinel@1.0.0` is published on npm under the `latest` tag; earlier prerelease versions remain historical release records only. The repository remains private until the maintainer separately approves public visibility.
 
 ## Contribution & governance
 
-The repository is currently private while the production-readiness and documentation gates are being completed. The contribution process is already visible and documented from this page; repository visibility will change only after an explicit maintainer approval.
+The repository is currently private by maintainer choice after the stable 1.0.0 release. The contribution process is already visible and documented from this page; repository visibility will change only after an explicit maintainer approval.
 
 | English | Bahasa Indonesia |
 |---|---|
@@ -71,7 +71,7 @@ Portfolio profile   summary · tech stack · screenshot · visible demo
 install → check → understand finding → fix → check again → share
 ```
 
-The current release candidate keeps the one-shot report deterministic and CI-safe. Interactive prompts are limited to `init`; terminal scan output is intentionally stable for copy, pipe, and regression testing.
+The stable release keeps the one-shot report deterministic and CI-safe. Interactive prompts are limited to `init`; terminal scan output is intentionally stable for copy, pipe, and regression testing.
 
 ```text
 $ reposentinel check . --profile public --lang en
@@ -114,7 +114,7 @@ The terminal UI uses a dark navy canvas with a cyan-to-violet accent line, cyan 
 
 ### Quick Start
 
-> **Verified local path:** the commands below run from the repository workspace. The prepared stable candidate is linked in the release section below.
+> **Verified local path:** the commands below run from the repository workspace. The published stable release is linked in the release section below.
 
 ```bash
 # Install the stable release from npm
@@ -225,11 +225,11 @@ flowchart LR
 | Custom rules | `implemented` as strict JSON registry with absence and explicit content-match modes |
 | Network link checks | `implemented` as opt-in bounded HTTP checks with internal-address blocking |
 | Portfolio dashboard | `implemented` as local JSON-to-HTML aggregation |
-| npm/package artifact | `prepared` as stable `reposentinel@1.0.0`; earlier prerelease artifacts remain historical |
+| npm/package artifact | `published` as stable `reposentinel@1.0.0`; earlier prerelease artifacts remain historical |
 | VS Code diagnostics | `implemented` as optional local adapter; VSIX packaging verified |
-| npm publication | `pending final stable publication approval`; stable artifact and registry gate are prepared |
+| npm publication | `published` as `reposentinel@1.0.0` under `latest`; clean registry install verified |
 | VS Code Marketplace publication | `pending publisher identity and VSCE_PAT` |
-| Stable production | `stable candidate prepared`; technical pilot validation completed; final approval pending |
+| Stable production | `published` as `1.0.0`; technical pilot and release gates verified |
 
 ### Safety boundaries
 
@@ -294,7 +294,7 @@ reposentinel report . --format markdown --output report.md --lang id
 
 ### Quick Start
 
-> **Status terverifikasi:** workspace dan stable release candidate sudah dapat dipasang, dibangun, diuji, serta dijalankan secara lokal pada Node.js 24.
+> **Status terverifikasi:** stable release workspace dan package sudah dapat dipasang, dibangun, diuji, serta dijalankan pada Node.js 24.
 
 ```bash
 # Install the stable release from npm
@@ -347,7 +347,7 @@ Tampilan terminal menggunakan canvas navy gelap dengan aksen cyan-ke-violet, bor
 
 ### Status saat ini
 
-Repository ini sudah melewati fondasi dokumentasi, hardening, dan technical pilot validation. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable candidate `reposentinel@1.0.0` sudah disiapkan; publication final dan approval visibility public tetap merupakan keputusan maintainer eksplisit.
+Repository ini sudah melewati fondasi dokumentasi, hardening, technical pilot validation, dan stable release gate. README bilingual, visual CLI specification, multilingual architecture, tech stack decision, production roadmap, issue template, PR template, core engine, safe discovery, config loader, 21-rule pack, local development CLI, reporter Markdown/JSON/SARIF/HTML, baseline flow, changed-files mode, GitHub Action, dogfooding, release gate, dan hardening gate sudah tersedia. Stable `reposentinel@1.0.0` sudah dipublikasikan ke npm dan registry install smoke test berhasil. Repository tetap private sampai approval terpisah untuk visibility public.
 
 ---
 

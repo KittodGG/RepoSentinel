@@ -375,7 +375,7 @@ Repository RepoSentinel memperoleh scan yang dapat dipahami, tidak memiliki crit
 
 ### Tujuan
 
-Menguji produk pada sejumlah kecil pengguna nyata sebelum stable publication.
+Menguji produk pada sejumlah kecil pengguna nyata sebelum stable publication. Milestone ini telah selesai dan hasilnya tercatat di [PILOT_VALIDATION_RESULTS.md](PILOT_VALIDATION_RESULTS.md).
 
 ### Pekerjaan satu per satu
 
@@ -386,7 +386,7 @@ Menguji produk pada sejumlah kecil pengguna nyata sebelum stable publication.
 5. Catat issue dengan label `pilot`, `ux`, `false-positive`, `rule-gap`, `crash`, dan `docs-gap`.
 6. Prioritaskan perbaikan P0/P1 yang menghalangi scan atau menimbulkan risiko keamanan.
 7. Jangan menambah dashboard, AI reviewer, marketplace rule, atau multi-repository SaaS hanya karena pilot feedback meminta permukaan baru; validasi core CLI terlebih dahulu.
-8. Potong stable candidate `1.0.0` dari tag yang reproducible.
+8. Potong stable `1.0.0` dari source commit yang reproducible, publish ke npm, dan verifikasi clean registry install. **Selesai.**
 
 ### External pilot gate
 
