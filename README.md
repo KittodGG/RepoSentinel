@@ -253,6 +253,7 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 | [License Policy](docs/LICENSE_POLICY.md) | MIT status, Apache-2.0 comparison, and migration checklist. |
 | [Stable Release Readiness](docs/RELEASE_READINESS.md) | Stable quality, security, compatibility, pilot, packaging, and rollback gates. |
 | [Pilot Validation](docs/PILOT_VALIDATION.md) | External validation protocol, cohort matrix, metrics, and stop conditions. |
+| [Pilot Validation Results](docs/PILOT_VALIDATION_RESULTS.md) | Measured internal and public-repository pilot results with safety boundaries. |
 
 ---
 
