@@ -119,4 +119,27 @@ describe("reporters", () => {
     expect(output).not.toContain("<script>");
     expect(output).not.toContain("https://cdn.");
   });
+
+  it("keeps the Markdown report structure stable", () => {
+    expect(renderMarkdownReport({
+      locale: "en",
+      repository: "fixture",
+      profile: "public",
+      findings: [warning],
+      threshold: "error"
+    })).toMatchSnapshot();
+  });
+
+  it("keeps the plain terminal report structure stable", () => {
+    expect(renderTerminalReport({
+      locale: "en",
+      repository: "fixture",
+      profile: "public",
+      filesScanned: 4,
+      ignoredCount: 1,
+      findings: [warning],
+      threshold: "error",
+      color: false
+    })).toMatchSnapshot();
+  });
 });

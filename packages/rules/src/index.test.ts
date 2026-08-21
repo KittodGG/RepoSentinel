@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RepositoryContext, RepositoryFile, ResolvedConfig } from "@reposentinel/core";
-import { enabledRules, rules, runRules } from "./index.js";
+import { enabledRules, rules, runRules, safeAutofixes } from "./index.js";
 
 function file(relativePath: string, kind: RepositoryFile["kind"] = "text", sizeBytes = 20, isTracked?: boolean): RepositoryFile {
   return {
@@ -109,5 +109,13 @@ describe("rules", () => {
     const attached = context("public", [file("README.md"), file(".gitignore")], {});
     attached.git = { available: true, currentBranch: "main" };
     expect(runRules(attached).map((finding) => finding.ruleId)).not.toContain("branch.default");
+  });
+
+  it("offers safe autofixes only for missing template files", () => {
+    const target = context("public", [], {});
+    const findings = runRules(target);
+    const fixes = safeAutofixes(target, findings);
+    expect(fixes.map((fix) => fix.path)).toEqual([".gitignore", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md"]);
+    expect(fixes.every((fix) => !fix.path.includes(".env") && !fix.path.includes("id_rsa"))).toBe(true);
   });
 });

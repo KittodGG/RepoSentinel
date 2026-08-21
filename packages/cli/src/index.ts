@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, watch as watchFiles, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import * as prompts from "@clack/prompts";
@@ -13,14 +13,16 @@ import {
   loadBaseline,
   summarizeFindings,
   writeBaseline,
+  normalizeFindings,
   type ExitThreshold,
   type Finding,
   type RepositoryProfile,
   type ScoreStatus
 } from "@reposentinel/core";
 import { loadConfig } from "@reposentinel/config";
-import { rules as ruleDefinitions, runRules } from "@reposentinel/rules";
+import { enabledRules, loadCustomRules, rules as ruleDefinitions, runNetworkLinkChecks, runRules, safeAutofixes, type AutofixOperation } from "@reposentinel/rules";
 import { renderHtmlReport as renderHtmlReportExternal, renderJsonReport as renderJsonReportExternal, renderMarkdownReport as renderMarkdownReportExternal, renderSarifReport as renderSarifReportExternal, renderTerminalReport as renderTerminalReportExternal } from "@reposentinel/reporters";
+import { parseDashboardReport, renderDashboardReport } from "@reposentinel/dashboard";
 import {
   createTranslator,
   isSupportedLocale,
@@ -44,6 +46,11 @@ type CheckOptions = {
   output?: string;
   baseline?: string;
   changedSince?: string;
+  fix?: string | boolean;
+  applyFix?: boolean;
+  watch?: boolean;
+  rulesFile?: string;
+  network?: boolean;
 };
 
 function explicitLocale(argv: string[]): string | undefined {
@@ -147,6 +154,34 @@ function renderJson(
   }, null, 2)}\n`;
 }
 
+function renderAutofixPreview(operations: readonly AutofixOperation[]): string {
+  return operations.map((operation) => [
+    `--- /dev/null`,
+    `+++ b/${operation.path}`,
+    `@@ create ${operation.path} @@`,
+    ...operation.content.replace(/\n$/u, "").split("\n").map((line) => `+${line}`),
+    `# ${operation.description}`
+  ].join("\n")).join("\n\n");
+}
+
+async function handleAutofix(root: string, context: Awaited<ReturnType<typeof createRepositoryContext>>, findings: readonly Finding[], requested: string | boolean | undefined, apply: boolean): Promise<void> {
+  if (!requested && !apply) return;
+  const requestedRule = typeof requested === "string" ? requested : undefined;
+  const selectedFindings = requestedRule ? findings.filter((finding) => finding.ruleId === requestedRule) : findings;
+  const operations = safeAutofixes(context, selectedFindings);
+  if (operations.length === 0) {
+    process.stderr.write(`${apply ? "No applicable safe autofix was found." : "No applicable safe autofix is available."}\n`);
+    return;
+  }
+  const safePaths = operations.map((operation) => ({ ...operation, absolutePath: resolveInsideRepository(root, operation.path) }));
+  process.stderr.write(`${apply ? "Safe autofix preview (applying after confirmation boundary):" : "Safe autofix dry-run (no files changed):"}\n${renderAutofixPreview(safePaths)}\n`);
+  if (!apply) return;
+  for (const operation of safePaths) {
+    await writeFile(operation.absolutePath, operation.content, { encoding: "utf8", flag: "wx" });
+  }
+  process.stderr.write(`Applied ${safePaths.length} safe autofix operation(s). Re-run check to refresh the report.\n`);
+}
+
 type ScanData = {
   root: string;
   profile: RepositoryProfile;
@@ -157,12 +192,16 @@ type ScanData = {
   changedFiles?: readonly string[];
 };
 
-async function collectScan(target: string, profile: RepositoryProfile, threshold: ExitThreshold, applyBaseline = true, baselineOverride?: string, changedSince?: string): Promise<ScanData> {
+async function collectScan(target: string, profile: RepositoryProfile, threshold: ExitThreshold, applyBaseline = true, baselineOverride?: string, changedSince?: string, rulesFileOverride?: string, networkOverride?: boolean): Promise<ScanData> {
   const root = resolve(target);
   const loaded = await loadConfig(root, profile);
-  const config = { ...loaded.config, ciFailOn: threshold };
+  const config = { ...loaded.config, ciFailOn: threshold, security: { ...loaded.config.security, network: networkOverride ?? loaded.config.security.network } };
   const context = await createRepositoryContext(root, profile, config);
-  const rawFindings = runRules(context);
+  const rulesFile = rulesFileOverride ?? config.customRules;
+  const customRules = rulesFile ? loadCustomRules(await readFile(resolveInsideRepository(root, rulesFile), "utf8")) : [];
+  const ruleFindings = runRules(context, [...enabledRules(context), ...customRules]);
+  const networkFindings = await runNetworkLinkChecks(context, { enabled: config.security.network });
+  const rawFindings = normalizeFindings([...ruleFindings, ...networkFindings]);
   const changed = changedSince ? await readChangedPaths(root, changedSince) : undefined;
   const changedSet = changed ? new Set(changed.paths) : undefined;
   const scopedFindings = changedSet
@@ -187,8 +226,9 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
 
   try {
     await access(root);
-    const scan = await collectScan(target, profile, threshold, true, options.baseline, options.changedSince);
+    const scan = await collectScan(target, profile, threshold, true, options.baseline, options.changedSince, options.rulesFile, options.network);
     const summary = summarizeFindings(scan.findings, threshold);
+    await handleAutofix(scan.root, scan.context, scan.findings, options.fix, options.applyFix === true);
     const changedOptions = scan.changedSince ? { changedSince: scan.changedSince, changedFiles: scan.changedFiles ?? [] } : {};
     const renderReport = (format: OutputFormat): string => format === "json"
       ? renderJsonReportExternal({ locale, repository: basename(scan.root), profile, findings: scan.findings, threshold, ...changedOptions })
@@ -236,6 +276,53 @@ async function runCheck(locale: Locale, target: string, options: CheckOptions): 
     process.stderr.write(`${colorize(options.color !== false, pc.red, "×")} ${message}\n`);
     return 2;
   }
+}
+
+async function runWatch(locale: Locale, target: string, options: CheckOptions): Promise<number> {
+  const oneShotOptions = { ...options, watch: false };
+  const initialStatus = await runCheck(locale, target, oneShotOptions);
+  if (process.env.CI === "true" || process.env.CI === "1") {
+    process.stderr.write("Watch mode requested in CI; completed one scan and exited safely.\n");
+    return initialStatus;
+  }
+
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let running = false;
+  const rerun = async (): Promise<void> => {
+    if (running) return;
+    running = true;
+    try {
+      await runCheck(locale, target, oneShotOptions);
+    } finally {
+      running = false;
+    }
+  };
+  const schedule = (): void => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { void rerun(); }, 250);
+  };
+  const stop = (): void => controller.abort();
+  process.once("SIGINT", stop);
+  process.once("SIGTERM", stop);
+  process.stderr.write("Watch mode active. Press Ctrl+C to stop. Changes are debounced by 250ms.\n");
+  try {
+    const watcher = watchFiles(resolve(target), { recursive: true, signal: controller.signal });
+    for await (const event of watcher) {
+      if (event.filename) schedule();
+    }
+  } catch (error) {
+    if (!controller.signal.aborted) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`Watch mode unavailable: ${message}. The initial scan was completed.\n`);
+      return initialStatus;
+    }
+  } finally {
+    if (timer) clearTimeout(timer);
+    process.removeListener("SIGINT", stop);
+    process.removeListener("SIGTERM", stop);
+  }
+  return 0;
 }
 
 function starterConfig(profile: RepositoryProfile): string {
@@ -328,6 +415,14 @@ function renderRuleExplanation(locale: Locale, ruleId: string): string | undefin
   ].join("\n") + "\n";
 }
 
+async function readDashboardReports(directory: string) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const reportFiles = entries.filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => entry.name).sort((left, right) => left.localeCompare(right));
+  const reports = [];
+  for (const name of reportFiles) reports.push(parseDashboardReport(await readFile(resolve(directory, name), "utf8"), name));
+  return reports;
+}
+
 function buildProgram(locale: Locale): Command {
   const { t } = createTranslator(locale);
   const program = new Command();
@@ -349,6 +444,11 @@ function buildProgram(locale: Locale): Command {
     .option("--output <file>", "Write the report to a file")
     .option("--baseline <file>", "Baseline path relative to the repository root")
     .option("--changed-since <ref>", "Only report findings on files changed since a Git base ref")
+    .option("--fix [ruleId]", "Preview an allowlisted safe autofix; optionally select one rule")
+    .option("--apply-fix", "Apply the safe autofix preview; use together with --fix")
+    .option("--watch", "Watch repository files and rerun the scan after debounced changes")
+    .option("--rules-file <file>", "Load a declarative JSON custom-rule registry inside the repository")
+    .option("--network", "Opt in to bounded HTTP link checks; disabled by default")
     .option("--no-color", "Disable ANSI color output")
     .action(async (target = ".", options: CheckOptions) => {
       if (!profiles.includes(options.profile as RepositoryProfile)) {
@@ -361,13 +461,18 @@ function buildProgram(locale: Locale): Command {
         process.exitCode = 2;
         return;
       }
+      if (options.applyFix && !options.fix) {
+        process.stderr.write("--apply-fix requires --fix so the intended safe operation is explicit.\n");
+        process.exitCode = 2;
+        return;
+      }
       if (options.format && options.format !== "terminal" && options.format !== "markdown" && options.format !== "json" && options.format !== "sarif" && options.format !== "html") {
         process.stderr.write(`Unsupported format: ${options.format}. Use: terminal, markdown, json, sarif, html.\n`);
         process.exitCode = 2;
         return;
       }
       const selected = resolveLocale(options.lang ?? locale);
-      process.exitCode = await runCheck(selected, target, options);
+      process.exitCode = options.watch ? await runWatch(selected, target, options) : await runCheck(selected, target, options);
     });
 
   program
@@ -424,6 +529,26 @@ function buildProgram(locale: Locale): Command {
       }
       const selected = resolveLocale(options.lang ?? locale);
       process.exitCode = await runBaselineCreate(selected, target, selectedProfile as RepositoryProfile, options.output);
+    });
+
+  program
+    .command("dashboard [path]")
+    .description("Build a self-contained portfolio dashboard from local RepoSentinel JSON reports")
+    .option("--output <file>", "Dashboard output path", "reposentinel-dashboard.html")
+    .action(async (target = ".", options: { output?: string }) => {
+      const root = resolve(target);
+      try {
+        await access(root);
+        const reports = await readDashboardReports(root);
+        const output = resolveInsideRepository(root, options.output ?? "reposentinel-dashboard.html");
+        await mkdir(dirname(output), { recursive: true });
+        await writeFile(output, renderDashboardReport(reports), "utf8");
+        process.stdout.write(`Dashboard written to ${output} (${reports.length} report(s))\n`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        process.stderr.write(`${colorize(true, pc.red, "×")} ${message}\n`);
+        process.exitCode = 2;
+      }
     });
 
   program

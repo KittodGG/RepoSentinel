@@ -17,6 +17,13 @@ export type RuleDefinition = {
   run(context: RepositoryContext): Finding[];
 };
 
+export type AutofixOperation = {
+  ruleId: string;
+  path: string;
+  content: string;
+  description: string;
+};
+
 function finding(
   rule: RuleDefinition,
   context: RepositoryContext,
@@ -62,6 +69,11 @@ function formatBytes(bytes: number): string {
 function isLikelyGeneratedPath(path: string): boolean {
   return /(^|\/)(dist|build|coverage|out|generated|\.next|storybook-static)(\/|$)/iu.test(path) || /\.map$/iu.test(path);
 }
+
+export { loadCustomRules } from "./custom.js";
+export type { CustomRuleSpec } from "./custom.js";
+export { runNetworkLinkChecks } from "./network.js";
+export type { NetworkLinkCheckOptions } from "./network.js";
 
 export const rules: readonly RuleDefinition[] = [
   {
@@ -514,4 +526,34 @@ export function runRules(context: RepositoryContext, selectedRules = enabledRule
     findings.push(...result);
   }
   return normalizeFindings(findings);
+}
+
+export function safeAutofixes(context: RepositoryContext, findings: readonly Finding[]): AutofixOperation[] {
+  const operations: AutofixOperation[] = [];
+  const missing = new Set(findings.map((finding) => finding.ruleId));
+  if (missing.has("gitignore.exists") && !fileExists(context, ".gitignore")) {
+    operations.push({
+      ruleId: "gitignore.exists",
+      path: ".gitignore",
+      content: "node_modules/\ndist/\ncoverage/\n.reposentinel/\n",
+      description: "Create a conservative starter .gitignore for local and generated files."
+    });
+  }
+  if (missing.has("community.contributing-guide") && !hasAnyFile(context, ["CONTRIBUTING.md", ".github/CONTRIBUTING.md", "docs/CONTRIBUTING.md"])) {
+    operations.push({
+      ruleId: "community.contributing-guide",
+      path: "CONTRIBUTING.md",
+      content: "# Contributing\n\nDescribe local setup, tests, review expectations, and pull request requirements here.\n",
+      description: "Create a minimal contributor-guide template for maintainer review."
+    });
+  }
+  if (missing.has("community.code-of-conduct") && !hasAnyFile(context, ["CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT.txt", ".github/CODE_OF_CONDUCT.md", "docs/CODE_OF_CONDUCT.md"])) {
+    operations.push({
+      ruleId: "community.code-of-conduct",
+      path: "CODE_OF_CONDUCT.md",
+      content: "# Code of Conduct\n\nDefine expected behavior, unacceptable conduct, and a private reporting path here.\n",
+      description: "Create a minimal code-of-conduct template for maintainer review."
+    });
+  }
+  return operations;
 }

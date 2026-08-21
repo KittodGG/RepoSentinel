@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`reporters > keeps the Markdown report structure stable 1`] = `
+"# RepoSentinel Report
+
+- Repository: \`fixture\`
+- Profile: \`public\`
+- Locale: \`en\`
+- Score: \`95 / 100\`
+- Status: \`ready\`
+
+## Summary
+
+| Severity | Count |
+|---|---:|
+| Critical | 0 |
+| Error | 0 |
+| Warning | 1 |
+| Info | 0 |
+
+## Findings
+
+### \`documentation.quickstart\` — warning
+- Path: \`README.md\`:12
+- Message: README does not contain a runnable Quick Start command.
+- Evidence: No setup command was detected.
+- Remediation: Add a Quick Start section with one run command.
+"
+`;
+
+exports[`reporters > keeps the plain terminal report structure stable 1`] = `
+"◈ RepoSentinel
+  repository readiness, without the noise
+
+Repository : fixture
+Profile    : public
+Mode       : local · network off · locale en
+
+╭─ health snapshot ───────────────────────────────────────────╮
+│ 95 / 100   READY                                            │
+│ 4 files · 1 ignored · threshold error                       │
+╰─────────────────────────────────────────────────────────────╯
+
+Findings  ──────────────────────────────────────────────────────────────
+CRITICAL 0   ERROR 0   WARNING 1   INFO 0
+
+!  documentation.quickstart  README.md:12  warning
+   README does not contain a runnable Quick Start command.
+   Evidence: No setup command was detected.
+   Fix: Add a Quick Start section with one run command.
+
+Score  : 95 / 100
+Status : ready
+Result : passed with warnings
+Exit code : 0
+"
+`;

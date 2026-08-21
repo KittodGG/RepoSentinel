@@ -9,7 +9,8 @@ export type RuleCategory =
   | "git"
   | "community"
   | "ci"
-  | "portfolio";
+  | "portfolio"
+  | "custom";
 export type RepositoryProfile = "public" | "portfolio" | "npm-package";
 export type ExitThreshold = Severity;
 export type ReportFormat = "terminal" | "markdown" | "json" | "sarif" | "html";
@@ -57,6 +58,7 @@ export type RepositoryContext = {
 export type ResolvedConfig = {
   profile: RepositoryProfile;
   baseline?: string;
+  customRules?: string;
   report?: {
     formats: readonly ReportFormat[];
     outputDir?: string;

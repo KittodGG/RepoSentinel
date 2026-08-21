@@ -45,13 +45,14 @@ Format severity dan exit behavior mengikuti severity model RepoSentinel: `critic
 | `reposentinel init` | Membuat `.reposentinel.yml`, termasuk mode `--force` untuk CI. | Implemented |
 | `reposentinel rules` | Menampilkan rule yang tersedia atau aktif. | Implemented |
 | `reposentinel explain <rule_id>` | Menjelaskan tujuan, severity, evidence, dan remediation suatu rule. | Implemented |
-| `reposentinel report <path>` | Alias untuk `check`; menghasilkan terminal, Markdown, JSON, atau SARIF. | Implemented |
+| `reposentinel report <path>` | Alias untuk `check`; menghasilkan terminal, Markdown, JSON, SARIF, atau HTML. | Implemented |
 | `reposentinel baseline create [path]` | Menyimpan fingerprint finding lama sebagai baseline. | Implemented |
 | `reposentinel check --baseline <file>` | Menghilangkan finding yang fingerprint-nya sudah ada di baseline. | Implemented |
-| `reposentinel check --watch` | Menjalankan scan ulang ketika file berubah. | Proposed / backlog awal |
-| `reposentinel check --network` | Mengaktifkan rule yang memerlukan network secara eksplisit. | Proposed; default tetap off |
+| `reposentinel check --watch` | Menjalankan scan ulang ketika file berubah dengan debounce 250 ms; di CI menjadi one-shot scan. | Implemented |
+| `reposentinel check --network` | Mengaktifkan bounded HTTP link checks secara eksplisit. | Implemented; default tetap off |
+| `reposentinel dashboard <report-dir>` | Menggabungkan local JSON reports menjadi portfolio HTML dashboard. | Implemented |
 
-Command berstatus `Implemented` di atas adalah kontrak beta yang sudah dibangun dan diuji. `--watch` dan `--network` tetap menjadi backlog karena network harus tetap opt-in dan mode watch membutuhkan lifecycle serta debounce policy yang terpisah. [1] [3]
+Command berstatus `Implemented` di atas adalah kontrak beta yang sudah dibangun dan diuji. Network tetap opt-in, watch memiliki debounce serta CI fallback, dan dashboard hanya membaca normalized JSON report lokal.
 
 ## 4. Case A — Bantuan dan Versi CLI
 
@@ -76,7 +77,7 @@ Commands:
 Options:
   -p, --profile <name>         public | portfolio | npm-package
       --fail-on <severity>     critical | error | warning | info
-      --format <format>        terminal | markdown | json | sarif
+      --format <format>        terminal | markdown | json | sarif | html
       --config <path>          Configuration file path
       --no-color                Disable terminal colors
   -v, --verbose                Show discovery and rule statistics
@@ -153,7 +154,7 @@ Created .reposentinel.yml
 Profile      : portfolio
 Fail on      : error
 Ignore paths : node_modules/**, dist/**, coverage/**, generated/**
-Reports      : terminal, markdown, json
+Reports      : terminal, markdown, json, sarif, html
 
 Run:
   reposentinel check . --profile portfolio
@@ -970,7 +971,7 @@ Supported formats:
   json
   sarif
 
-Note: HTML report is not part of the MVP contract.
+Note: HTML report tersedia sebagai self-contained offline report pada beta contract.
 ```
 
 **Exit code:** `2`.

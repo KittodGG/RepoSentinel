@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
+    "@reposentinel/dashboard": "workspace:*",
     "commander": "^14.0.0",
     "ignore": "^7.0.6",
     "picocolors": "^1.1.1",

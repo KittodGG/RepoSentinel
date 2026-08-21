@@ -11,6 +11,7 @@ const reportFormatSchema = z.enum(["terminal", "markdown", "json", "sarif", "htm
 const rawConfigSchema = z.object({
   extends: z.string().optional(),
   baseline: z.string().optional(),
+  custom_rules: z.string().optional(),
   profile: profileSchema.optional(),
   rules: z.record(z.string(), severitySchema).optional(),
   ignore: z.array(z.string()).optional(),
@@ -54,6 +55,7 @@ function resolveConfig(root: string, raw: z.infer<typeof rawConfigSchema>, profi
   return {
     profile,
     ...(raw.baseline ? { baseline: raw.baseline } : {}),
+    ...(raw.custom_rules ? { customRules: raw.custom_rules } : {}),
     report: {
       formats: (raw.report?.formats ?? ["terminal", "markdown", "json"]) as ReportFormat[],
       ...(raw.report?.output_dir ? { outputDir: raw.report.output_dir } : {})

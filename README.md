@@ -142,6 +142,21 @@ reposentinel report . --format html --output report.html
 # Scan only findings on files changed since a Git base ref
 reposentinel check . --changed-since origin/main --format json
 
+# Preview safe template fixes without changing files
+reposentinel check . --fix --no-color
+
+# Re-run scans after debounced local changes
+reposentinel check . --watch
+
+# Load a repository-local declarative custom-rule registry
+reposentinel check . --rules-file custom-rules.json --format json
+
+# Opt in to bounded HTTP link checks
+reposentinel check . --network --format json
+
+# Aggregate local JSON reports into a portfolio dashboard
+reposentinel dashboard .reposentinel/reports --output dashboard.html
+
 # Create a baseline, then focus future scans on new findings
 reposentinel baseline create .
 reposentinel check . --format json
@@ -185,6 +200,12 @@ flowchart LR
 | HTML reporter | `implemented` as self-contained offline report |
 | Baseline flow | `implemented` as repository-local fingerprint suppression |
 | Changed-files mode | `implemented` with explicit Git base ref and deterministic scope |
+| Safe autofix | `implemented` as allowlisted dry-run/apply templates |
+| Watch mode | `implemented` with debounce and CI one-shot fallback |
+| VS Code diagnostics | `implemented` as optional local adapter package |
+| Custom rules | `implemented` as strict JSON registry with glob-only matching |
+| Network link checks | `implemented` as explicit opt-in bounded HTTP checks |
+| Portfolio dashboard | `implemented` as local JSON-to-HTML aggregation |
 | npm/package artifact | `beta candidate` `v0.1.0-beta.1` GitHub prerelease |
 | npm publication | `pending owner-approved registry publication` |
 | Beta production | `beta candidate published` as `v0.1.0-beta.1`; pilot sign-off pending |
@@ -268,9 +289,9 @@ governance + branch hygiene
         ↓
 workspace + core contract
         ↓
-safe discovery + 15 rule fixtures
+safe discovery + 21 rule fixtures
         ↓
-Sentinel Console + plain/JSON/Markdown reporters
+Sentinel Console + plain/JSON/Markdown/SARIF/HTML reporters
         ↓
 CLI MVP + package smoke test
         ↓

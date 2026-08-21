@@ -1,0 +1,31 @@
+{
+  "name": "@reposentinel/vscode",
+  "version": "0.1.0-dev.1",
+  "private": true,
+  "description": "VS Code diagnostics adapter for RepoSentinel JSON reports",
+  "type": "module",
+  "main": "dist/extension.cjs",
+  "files": ["dist", "package.json", "README.md"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "reposentinel.scan",
+        "title": "RepoSentinel: Scan Workspace"
+      }
+    ]
+  },
+  "activationEvents": ["onCommand:reposentinel.scan"],
+  "scripts": {
+    "build": "tsup src/extension.ts --format cjs --external vscode --clean",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/vscode": "^1.103.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

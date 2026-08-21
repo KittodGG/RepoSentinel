@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+import { loadCustomRules } from "./custom.js";
+import type { RepositoryContext, ResolvedConfig } from "@reposentinel/core";
+
+const config: ResolvedConfig = {
+  profile: "public",
+  ignore: [],
+  rules: {},
+  ciFailOn: "error",
+  security: { network: false, scanHistory: false, redactFindings: true }
+};
+
+function context(files: RepositoryContext["files"], text: Record<string, string>): RepositoryContext {
+  return { root: "/fixture", profile: "public", files, textCache: new Map(Object.entries(text)), config };
+}
+
+describe("custom rule registry", () => {
+  it("matches a path glob and content deterministically", () => {
+    const [rule] = loadCustomRules(JSON.stringify([{
+      id: "custom.policy",
+      severity: "warning",
+      path: "docs/*.md",
+      contentIncludes: "report",
+      message: "Policy is missing.",
+      remediation: "Add the policy."
+    }]));
+    const files = [{ relativePath: "docs/SECURITY.md", absolutePath: "/fixture/docs/SECURITY.md", kind: "text" as const, sizeBytes: 10, isIgnored: false }];
+    expect(rule?.run(context(files, { "docs/SECURITY.md": "private report path" }))).toEqual([]);
+    expect(rule?.run(context(files, { "docs/SECURITY.md": "incomplete" }))[0]?.ruleId).toBe("custom.policy");
+  });
+
+  it("rejects invalid IDs and duplicate IDs", () => {
+    expect(() => loadCustomRules(JSON.stringify([{ id: "policy", severity: "info", path: "SECURITY.md", message: "x", remediation: "y" }]))).toThrow("custom.<name>");
+    expect(() => loadCustomRules(JSON.stringify([
+      { id: "custom.one", severity: "info", path: "a", message: "x", remediation: "y" },
+      { id: "custom.one", severity: "info", path: "b", message: "x", remediation: "y" }
+    ]))).toThrow("Duplicate custom rule ID");
+  });
+});
