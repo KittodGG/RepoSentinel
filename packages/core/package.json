@@ -19,7 +19,7 @@
     "@types/node": "^26.2.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "ignore": "^7.0.6",
