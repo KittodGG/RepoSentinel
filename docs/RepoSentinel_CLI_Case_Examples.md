@@ -6,7 +6,7 @@
 **Bahasa output:** Penjelasan pengguna menggunakan Bahasa Indonesia; command, rule ID, konfigurasi, dan istilah teknis tetap dalam Bahasa Inggris.  
 **Positioning:** *RepoSentinel — cek repository Anda sebelum orang lain menilainya.*
 
-> **Penting:** RepoSentinel memiliki stable release 1.0.0 dan command yang berstatus `Implemented` sudah diuji. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; gunakan README dan implementation execution map sebagai source untuk status aktual.
+> **Penting:** RepoSentinel memiliki stable release 1.0.0 dan command yang berstatus `Implemented` sudah diuji. Untuk daftar profile, locale, option, format report, threshold, dan configuration yang benar-benar tersedia, gunakan [Usage Guide](./USAGE.md) sebagai kontrak utama. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; blok yang menyebut option atau command yang tidak ada di Usage Guide harus diperlakukan sebagai ilustrasi target, bukan instruksi stable.
 
 ## 1. Tujuan Dokumen
 

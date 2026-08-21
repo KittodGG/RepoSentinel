@@ -14,7 +14,7 @@
 **Repository readiness, without the noise.**  
 *Cek repository Anda sebelum orang lain menilainya.*
 
-[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Governance](GOVERNANCE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Templates](#contribution--governance) · [Stable readiness](docs/RELEASE_READINESS.md) · [Roadmap](docs/ROADMAP_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [License](LICENSE)
+[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Usage / Penggunaan](docs/USAGE.md) · [Governance](GOVERNANCE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Templates](#contribution--governance) · [Stable readiness](docs/RELEASE_READINESS.md) · [Roadmap](docs/ROADMAP_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [License](LICENSE)
 
 </div>
 
@@ -191,7 +191,20 @@ reposentinel rules --category security --lang id
 reposentinel explain security.private-key --lang id
 ```
 
-The target language resolution order is `--lang`, `REPOSENTINEL_LANG`, config, interactive environment hint, then deterministic English fallback. Rule IDs, config keys, JSON keys, exit codes, and schema version stay stable across languages.
+The target language resolution order is `--lang`, `REPOSENTINEL_LANG`, `LC_ALL`, `LANG`, then deterministic English fallback. The YAML configuration does not define a `lang` key. Rule IDs, config keys, JSON keys, exit codes, and schema version stay stable across languages.
+
+### Profiles, locales, outputs, and thresholds
+
+| Concern | Supported values | Default / behavior |
+|---|---|---|
+| Profile | `public`, `portfolio`, `npm-package`, `academic`, `private-team`, `mobile-app` | `public`; selects the readiness context and enabled rule set. |
+| UI locale | `en`, `id` | `en`; choose with `--lang` or `REPOSENTINEL_LANG`. |
+| Report format | `terminal`, `markdown`, `json`, `sarif`, `html` | Terminal on stdout unless `--format` or configuration selects another reporter. |
+| Failure threshold | `critical`, `error`, `warning`, `info` | `error`; only findings at or above the threshold return exit code `1`. |
+| Network | off / `--network` | Off by default; bounded HTTP checks require explicit opt-in. |
+| Configuration | `.reposentinel.yml` | Optional; strict YAML schema with profile, rules, ignore, report, security, and CI keys. |
+
+Detailed examples and the complete configuration reference are available in the bilingual [Usage Guide](docs/USAGE.md).
 
 ### Architecture at a glance
 
@@ -217,7 +230,7 @@ flowchart LR
 | CLI visual interaction specification | `implemented` as documentation |
 | Multilingual architecture decision | `implemented` as documentation |
 | Core engine | `implemented` as deterministic development foundation |
-| Rule pack | `implemented` as initial 21-rule pack, including governance and Git hygiene checks |
+| Rule pack | `implemented` as 27-rule pack, including governance, Git hygiene, package structure, and CI security checks |
 | CLI package | `implemented` as local development CLI |
 | GitHub Action | `implemented` as composite action and source-checkout workflow |
 | Dogfooding and hardening | `implemented` as local self-scan and safety gates |
@@ -238,7 +251,7 @@ flowchart LR
 
 ### Safety boundaries
 
-RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure. The built-in credential detector intentionally covers only documented high-confidence GitHub, Slack, and AWS prefixes; it does not claim coverage for every Google, Stripe, OpenAI, Azure, JWT, or high-entropy secret format.
+RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure. The built-in credential detector intentionally covers only documented high-confidence GitHub, Slack-token, AWS, Stripe, Google API, OpenAI, npm, and JWT-like prefixes; it does not claim coverage for every Azure, Slack webhook, connection string, or high-entropy secret format.
 
 Configured ignore patterns prune files from the general scan. Repository `.gitignore` files remain visible as metadata, and local files matched only by repository `.gitignore` are isolated for security detectors so `.env`, key, and credential exposure can still be reported without sending their content to other rules. Aggregate file and byte budgets are bounded; when a limit is reached, reports expose `scanBudget.truncated: true` and the cached text-byte count instead of silently presenting a partial scan as complete.
 
@@ -250,7 +263,8 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 |---|---|
 | [Project Context](docs/RepoSentinel_Project_Context.md) | Product source of truth, scope, principles, and acceptance criteria. |
 | [Tech Stack & Rule Engine](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md) | Core architecture, findings, rule contract, fixtures, and security boundary. |
-| [CLI Case Examples](docs/RepoSentinel_CLI_Case_Examples.md) | All target commands, success cases, warnings, errors, reports, and exit codes. |
+| [Usage Guide](docs/USAGE.md) | Exact stable profiles, locales, options, formats, thresholds, configuration, and practical workflows. |
+| [CLI Case Examples](docs/RepoSentinel_CLI_Case_Examples.md) | Illustrative command transcripts and UX cases; exact shipped options are maintained in the Usage Guide. |
 | [Visual & Interactive CLI](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) | Sentinel Console panels, keyboard navigation, themes, fallback, and CI mode. |
 | [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md) | Node.js, TypeScript, CLI, localization, performance, and dependency decisions. |
 | [Production Roadmap](docs/ROADMAP_PRODUCTION.md) | One-by-one stages from repository bootstrap to stable production. |
@@ -324,6 +338,19 @@ pnpm install
 pnpm build
 node packages/cli/dist/index.js check . --lang id
 ```
+
+### Profile, locale, format, dan threshold
+
+| Area | Nilai yang tersedia | Default / perilaku |
+|---|---|---|
+| Profile | `public`, `portfolio`, `npm-package`, `academic`, `private-team`, `mobile-app` | `public`; menentukan konteks readiness dan rule yang aktif. |
+| Locale UI | `en`, `id` | `en`; pilih dengan `--lang` atau `REPOSENTINEL_LANG`. |
+| Format report | `terminal`, `markdown`, `json`, `sarif`, `html` | Terminal ke stdout kecuali memilih `--format` atau konfigurasi report. |
+| Failure threshold | `critical`, `error`, `warning`, `info` | `error`; finding pada atau di atas threshold menghasilkan exit code `1`. |
+| Network | off / `--network` | Nonaktif secara default; bounded HTTP check harus opt-in. |
+| Configuration | `.reposentinel.yml` | Opsional; YAML strict untuk profile, rules, ignore, report, security, dan CI. |
+
+Lihat [Usage Guide](docs/USAGE.md) untuk penjelasan bilingual dan contoh lengkap.
 
 ### Tahapan menuju stable production
 
