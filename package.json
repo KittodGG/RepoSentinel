@@ -21,7 +21,7 @@
     "typecheck": "pnpm build && pnpm -r typecheck"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.2.0",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4",
