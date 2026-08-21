@@ -29,4 +29,4 @@ await execFileAsync("npm", ["pack", "--ignore-scripts", "--pack-destination", ar
   cwd: staging,
   maxBuffer: 2 * 1024 * 1024
 });
-console.log(`Alpha artifact created in ${artifactDir}`);
+console.log(`Release artifact created in ${artifactDir}`);

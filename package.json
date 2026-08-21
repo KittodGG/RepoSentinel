@@ -10,9 +10,8 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "pack:alpha": "pnpm --filter reposentinel build && node scripts/pack-alpha.mjs",
-    "pack:beta": "pnpm --filter reposentinel build && node scripts/pack-alpha.mjs",
-    "release:gate": "pnpm typecheck && pnpm test && pnpm build && pnpm pack:beta && node scripts/release-gate.mjs",
+    "pack:release": "pnpm --filter reposentinel build && node scripts/pack-release.mjs",
+    "release:gate": "pnpm typecheck && pnpm test && pnpm build && pnpm pack:release && node scripts/release-gate.mjs",
     "benchmark": "pnpm --filter reposentinel build && node scripts/benchmark.mjs . 5",
     "dogfood": "pnpm --filter reposentinel build && node scripts/dogfood.mjs",
     "dev": "pnpm --filter reposentinel dev",

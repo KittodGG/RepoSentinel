@@ -111,6 +111,21 @@ describe("rules", () => {
     expect(runRules(attached).map((finding) => finding.ruleId)).not.toContain("branch.default");
   });
 
+  it("resolves nested relative Markdown links and repository directories", () => {
+    const result = runRules(context("public", [
+      file("README.md"),
+      file("SECURITY.md"),
+      file(".github/ISSUE_TEMPLATE/documentation.md"),
+      file(".github/ISSUE_TEMPLATE", "directory"),
+      file("docs/guide.md")
+    ], {
+      "README.md": "# RepoSentinel\n\n[Guide](docs/guide.md)",
+      ".github/ISSUE_TEMPLATE/documentation.md": "[Security](../../SECURITY.md)\n[Templates](./)",
+      "docs/guide.md": "[Root](../README.md)\n[Templates](../.github/ISSUE_TEMPLATE/)"
+    }));
+    expect(result.filter((finding) => finding.ruleId === "links.valid")).toEqual([]);
+  });
+
   it("offers safe autofixes only for missing template files", () => {
     const target = context("public", [], {});
     const findings = runRules(target);

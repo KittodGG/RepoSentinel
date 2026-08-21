@@ -1,37 +1,41 @@
-# RepoSentinel — Beta Production Release
+# RepoSentinel — Historical Prerelease Record / Catatan Historis Prerelease
 
-## Release candidate
+> This document records the historical `0.1.0-beta.1` release process. It is not the active production-release contract. / Dokumen ini mencatat proses release historis `0.1.0-beta.1`. Dokumen ini bukan kontrak production release aktif.
 
-**Version:** `0.1.0-beta.1`  
-**Release channel:** beta  
-**Runtime:** Node.js 24 LTS  
-**Supported UI locales:** `en`, `id`  
-**Machine report schema:** `reposentinel.report/v1`
+## Historical release candidate / Release candidate historis
 
-## Release gates
+| Field / Field | Value / Nilai |
+|---|---|
+| Version / Versi | `0.1.0-beta.1` |
+| Release channel / Channel release | `beta` — historical only / hanya historis |
+| Runtime | Node.js 24 LTS |
+| Supported UI locales / Locale UI | `en`, `id` |
+| Machine report schema | `reposentinel.report/v1` |
 
-| Gate | Verification | Status |
-|---|---|---|
-| Repository source of truth | README, roadmap, tech-stack decision, CLI UX specification, security policy, and beta pilot docs are present. | Ready |
-| Core correctness | Core, discovery, config, localization, rules, and reporter tests pass. | Ready |
-| CLI behavior | `check`, `report`, `lang`, `init`, `rules`, and `explain` are available with localized output. | Ready |
-| Security boundary | Network remains disabled by default; target scripts are not executed; symlinks are not followed; evidence is redacted. | Ready |
-| Self-scan | Dogfood score is 100/100 with zero critical, error, warning, or info findings under project config. | Ready |
-| Hardening | Invalid locale, missing path, unknown rule, JSON schema, and redaction checks pass. | Ready |
-| Package | `reposentinel-0.1.0-beta.1.tgz` is staged without unpublished internal runtime dependencies and passes clean-install smoke testing. | Ready |
-| CI | Quality workflow and composite action YAML validate; local equivalent passes. | Ready |
-| Pilot readiness | Closed-beta cohort, severity classification, feedback template, and stop conditions are documented. | Ready |
+## Historical gates / Gate historis
 
-## Release procedure
+The original prerelease process verified source-of-truth documents, core tests, CLI behavior, security boundaries, self-scan, hardening, package staging, CI, and pilot readiness. These checks remain useful evidence, but the active stable-release requirements are defined in [RELEASE_READINESS.md](RELEASE_READINESS.md).
 
-First run the full release gate on Node.js 24 with `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm dogfood`, and `node scripts/hardening-checks.mjs`. Then run `pnpm pack:beta`, inspect the tarball manifest, install it into an empty staging directory with production dependencies only, and run `reposentinel --version`, `reposentinel rules`, and a JSON self-scan.
+Proses prerelease awal memverifikasi source-of-truth document, core test, perilaku CLI, security boundary, self-scan, hardening, package staging, CI, dan pilot readiness. Check tersebut tetap menjadi bukti historis, tetapi persyaratan stable release aktif didefinisikan di [RELEASE_READINESS.md](RELEASE_READINESS.md).
 
-Create the Git tag `v0.1.0-beta.1` only after the clean staging smoke test passes. Publish the GitHub release notes from `CHANGELOG.md`. npm publication is intentionally a separate owner-approved action; the artifact can be evaluated privately before registry publication.
+| Gate / Gate | Historical result / Hasil historis |
+|---|---|
+| Core correctness / Correctness core | Tests for core, discovery, config, localization, rules, and reporters passed. / Test lulus. |
+| CLI behavior / Perilaku CLI | Localized commands and output were verified. / Command dan output multilingual diverifikasi. |
+| Security boundary / Security boundary | Network off by default, target scripts not executed, symlinks bounded, evidence redacted. / Network default off, script target tidak dijalankan, symlink dibatasi, evidence disanitasi. |
+| Package / Package | `0.1.0-beta.1` artifact passed staging smoke tests. / Artifact lulus staging smoke test. |
+| CI / CI | Quality workflow and local equivalents passed. / Quality workflow dan equivalent lokal lulus. |
 
-## Rollback
+## Historical procedure / Prosedur historis
 
-If a P0/P1 issue appears, mark the beta release as withdrawn, stop the pilot, and publish a correction note. Revert the release tag or publish a higher patch beta version; do not rewrite published package history. Preserve the failing fixture and redacted report so the regression becomes a permanent test.
+The original release gate used Node.js 24, a frozen install, typecheck, tests, build, dogfood, hardening checks, `pnpm pack:release`, tarball inspection, clean staging installation, `reposentinel --version`, `reposentinel rules`, and a JSON self-scan.
 
-## Post-release evaluation
+Release gate awal menggunakan Node.js 24, frozen install, typecheck, test, build, dogfood, hardening check, `pnpm pack:release`, inspeksi tarball, clean staging installation, `reposentinel --version`, `reposentinel rules`, dan JSON self-scan.
 
-During the first pilot window, review false-positive rate, missed high-severity findings, average scan duration, report readability, translation completeness, exit-code correctness, and package installation success. A beta production follow-up should address P0/P1 issues immediately, consolidate P2 findings into the next milestone, and record P3 polish requests without weakening the safety boundary.
+npm publication was a separate owner-approved action. This file is retained as historical release evidence; do not use its prerelease version or channel as the current installation instruction. / Publication npm merupakan tindakan terpisah yang memerlukan approval owner. File ini dipertahankan sebagai bukti release historis; jangan gunakan version atau channel prerelease di sini sebagai instruksi instalasi aktif.
+
+## Historical rollback / Rollback historis
+
+If a prerelease issue appeared, the release was to be marked withdrawn, the pilot stopped, and a correction note published. Published package history must not be rewritten. The permanent process is now defined in [RELEASE_READINESS.md](RELEASE_READINESS.md).
+
+Jika masalah muncul pada prerelease, release harus ditandai withdrawn, pilot dihentikan, dan correction note diterbitkan. Riwayat package yang sudah dipublish tidak boleh ditulis ulang. Proses permanen sekarang didefinisikan di [RELEASE_READINESS.md](RELEASE_READINESS.md).

@@ -1,11 +1,17 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a private security vulnerability
+  - name: Report a private security vulnerability / Laporkan vulnerability privat
     url: https://github.com/KittodGG/RepoSentinel/security/advisories/new
-    about: Do not disclose unpatched vulnerabilities in a public issue. Use GitHub Private Vulnerability Reporting when available.
-  - name: Read the contribution guide
+    about: Do not disclose an unpatched vulnerability publicly. Jangan mengungkapkan vulnerability yang belum ditambal di ruang publik.
+  - name: Read the Governance Hub / Baca Governance Hub
+    url: https://github.com/KittodGG/RepoSentinel/blob/main/GOVERNANCE.md
+    about: Find the correct process, templates, Code of Conduct, and contribution path. Temukan proses, template, Code of Conduct, dan jalur kontribusi yang tepat.
+  - name: Read the Contribution Guide / Baca Panduan Kontribusi
     url: https://github.com/KittodGG/RepoSentinel/blob/main/CONTRIBUTING.md
-    about: Review setup, scope, testing, licensing, and Pull Request requirements before contributing.
-  - name: Read the security policy
+    about: Review setup, scope, testing, licensing, and Pull Request requirements. Review setup, scope, testing, lisensi, dan persyaratan Pull Request.
+  - name: Read the Security Policy / Baca Security Policy
     url: https://github.com/KittodGG/RepoSentinel/blob/main/SECURITY.md
-    about: Learn the safe disclosure process and security boundaries.
+    about: Learn the safe disclosure process and scanner security boundaries. Pelajari proses disclosure aman dan batas keamanan scanner.
+  - name: Read the Code of Conduct / Baca Code of Conduct
+    url: https://github.com/KittodGG/RepoSentinel/blob/main/CODE_OF_CONDUCT.md
+    about: Review community expectations and reporting options. Review ekspektasi komunitas dan opsi pelaporan.

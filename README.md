@@ -9,11 +9,27 @@
 **Repository readiness, without the noise.**  
 *Cek repository Anda sebelum orang lain menilainya.*
 
-[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [Security boundary](docs/RepoSentinel_Tech_Stack_and_Rule_Engine.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
+[English](#english) · [Bahasa Indonesia](#bahasa-indonesia) · [Governance](GOVERNANCE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Templates](#contribution--governance) · [Stable readiness](docs/RELEASE_READINESS.md) · [Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) · [CLI UX](docs/RepoSentinel_CLI_Visual_Interaction_Spec.md) · [License](LICENSE)
 
 </div>
 
 > **Release status / Status rilis:** RepoSentinel is a verified **beta candidate**. The local CLI, multilingual output, SARIF reporter, baseline flow, package artifact, self-scan, GitHub Action, and documentation are implemented and validated. The CLI is published on npm as `reposentinel@0.1.0-beta.2` under the `beta` tag; the GitHub prerelease `v0.1.0-beta.1` remains the source snapshot. Pilot feedback and stable-release sign-off remain separate release activities.
+
+## Contribution & governance
+
+The repository is currently private while the production-readiness and documentation gates are being completed. The contribution process is already visible and documented from this page; repository visibility will change only after an explicit maintainer approval.
+
+| English | Bahasa Indonesia |
+|---|---|
+| [Governance Hub](GOVERNANCE.md) — the central process index | [Governance Hub](GOVERNANCE.md) — indeks proses utama |
+| [Contributing Guide](CONTRIBUTING.md) — setup, scope, testing, and Pull Requests | [Panduan Kontribusi](CONTRIBUTING.md) — setup, scope, testing, dan Pull Request |
+| [Code of Conduct](CODE_OF_CONDUCT.md) — community standards and reporting | [Code of Conduct](CODE_OF_CONDUCT.md) — standar komunitas dan pelaporan |
+| [Security Policy](SECURITY.md) — private disclosure and security boundaries | [Security Policy](SECURITY.md) — pelaporan privat dan batas keamanan |
+| [Pull Request template](.github/pull_request_template.md) | [Template Pull Request](.github/pull_request_template.md) |
+| [Issue templates](.github/ISSUE_TEMPLATE/) — bug, feature, docs, question, product feedback | [Template Issue](.github/ISSUE_TEMPLATE/) — bug, feature, docs, question, product feedback |
+| [GitHub Governance](docs/GITHUB_GOVERNANCE.md) — CODEOWNERS and branch protection policy | [GitHub Governance](docs/GITHUB_GOVERNANCE.md) — CODEOWNERS dan kebijakan branch protection |
+
+**Safe contribution rule / Aturan kontribusi aman:** never publish secrets, private keys, `.env` contents, proprietary source, unredacted logs, or an unpatched vulnerability in a public Issue or Pull Request. / Jangan pernah mengirim secret, private key, isi `.env`, proprietary source, log yang belum disanitasi, atau vulnerability yang belum ditambal melalui Issue atau Pull Request publik.
 
 ---
 
@@ -232,8 +248,9 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 | [Beta Production Roadmap](docs/ROADMAP_BETA_PRODUCTION.md) | One-by-one stages from repository bootstrap to beta production. |
 | [Contributing](CONTRIBUTING.md) | Setup, contribution workflow, review rules, testing, security, and license declaration. |
 | [Security Policy](SECURITY.md) | Private vulnerability reporting and safe disclosure boundaries. |
-| [GitHub Governance](docs/GITHUB_GOVERNANCE.md) | CODEOWNERS and branch-protection policy, including current plan limitation. |
+| [GitHub Governance](docs/GITHUB_GOVERNANCE.md) | CODEOWNERS, branch-protection policy, and private-to-public visibility gate. |
 | [License Policy](docs/LICENSE_POLICY.md) | MIT status, Apache-2.0 comparison, and migration checklist. |
+| [Stable Release Readiness](docs/RELEASE_READINESS.md) | Stable quality, security, compatibility, pilot, packaging, and rollback gates. |
 
 ---
 
@@ -348,11 +365,13 @@ Repository ini sudah melewati tahap fondasi dokumentasi dan memasuki tahap beta 
 
 Keputusan ini mengutamakan runtime LTS, dependency yang terukur, core engine yang terpisah dari UI, dan kemampuan fallback untuk CI/SSH. Detailnya ada di [Tech Stack Decisions](docs/TECH_STACK_DECISIONS.md).
 
-## Contributing
+## Contributing / Kontribusi
 
-Pada tahap awal, perubahan harus diawali dengan `context → problem → proposed solution → acceptance criteria → dependencies → risks`. Rule baru wajib memiliki rule ID stabil, kategori, severity, detector, evidence, remediation, fixture positif/negatif, regression test, dan dokumentasi. Repository saat ini menggunakan **MIT License**; MIT adalah open-source license yang valid dan tidak harus diganti menjadi Apache-2.0 hanya karena project bersifat open source. Perbandingan lisensi dan batas migrasi terdokumentasi pada [License Policy](docs/LICENSE_POLICY.md).
+**English:** Start with the [Governance Hub](GOVERNANCE.md), read [CONTRIBUTING.md](CONTRIBUTING.md), and choose the matching [Issue template](.github/ISSUE_TEMPLATE/). Larger changes should begin with `context → problem → proposed solution → acceptance criteria → dependencies → risks`. New rules require a stable rule ID, category, severity, deterministic detector, safe evidence, remediation, positive/negative fixtures, regression tests, and documentation.
 
-Sebelum membuka Pull Request, baca [CONTRIBUTING.md](CONTRIBUTING.md), pilih Issue template yang sesuai, jalankan checks yang tersedia, dan jelaskan dampak security/privacy. Jangan mengirim secret atau source code sensitif pada Issue, log, screenshot, atau fixture.
+**Bahasa Indonesia:** Mulai dari [Governance Hub](GOVERNANCE.md), baca [CONTRIBUTING.md](CONTRIBUTING.md), lalu pilih [Issue template](.github/ISSUE_TEMPLATE/) yang sesuai. Perubahan besar sebaiknya diawali dengan `context → problem → proposed solution → acceptance criteria → dependencies → risks`. Rule baru wajib memiliki rule ID stabil, kategori, severity, detector deterministic, evidence aman, remediation, fixture positif/negatif, regression test, dan dokumentasi.
+
+Repository ini menggunakan **MIT License**. MIT adalah open-source license yang valid dan tidak harus diganti menjadi Apache-2.0 hanya karena project bersifat open source. Perbandingan lisensi dan batas migrasi terdokumentasi pada [License Policy](docs/LICENSE_POLICY.md). Security concern harus mengikuti [SECURITY.md](SECURITY.md), bukan Issue publik.
 
 ## References
 

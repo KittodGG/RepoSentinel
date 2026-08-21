@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import {
   fingerprintFor,
   normalizeFindings,
@@ -44,6 +45,18 @@ function finding(
 
 function fileExists(context: RepositoryContext, path: string): boolean {
   return context.files.some((file) => file.relativePath === path && file.kind !== "directory");
+}
+
+function resolveRepositoryReference(sourcePath: string, target: string): string {
+  const normalizedTarget = target.split(/[?#]/u, 1)[0]?.trim() ?? "";
+  if (!normalizedTarget || normalizedTarget.startsWith("/")) return normalizedTarget;
+  return posix.normalize(posix.join(posix.dirname(sourcePath), normalizedTarget));
+}
+
+function repositoryPathExists(context: RepositoryContext, path: string): boolean {
+  const normalized = path.replace(/\/$/u, "");
+  return context.files.some((file) => file.relativePath === normalized)
+    || context.files.some((file) => file.relativePath.startsWith(`${normalized}/`));
 }
 
 function firstTextLine(context: RepositoryContext, path: string, predicate: (line: string) => boolean): number | undefined {
@@ -302,9 +315,8 @@ export const rules: readonly RuleDefinition[] = [
             }
             continue;
           }
-          const normalized = target.split("#")[0]?.replace(/^\.\//u, "") ?? "";
-          const sourceDirectory = sourcePath.includes("/") ? `${sourcePath.slice(0, sourcePath.lastIndexOf("/") + 1)}${normalized}` : normalized;
-          const exists = context.files.some((file) => file.relativePath === sourceDirectory || file.relativePath === normalized);
+          const normalized = resolveRepositoryReference(sourcePath, target);
+          const exists = repositoryPathExists(context, normalized);
           if (!exists) {
             findings.push(finding(this, context, {
               path: sourcePath,
@@ -332,9 +344,8 @@ export const rules: readonly RuleDefinition[] = [
         for (const match of source.matchAll(imagePattern)) {
           const target = match[1]?.trim().split(/\s+/u)[0] ?? "";
           if (!target || /^https?:\/\//iu.test(target) || target.startsWith("data:")) continue;
-          const normalized = target.split("#")[0]?.replace(/^\.\//u, "") ?? "";
-          const sourceDirectory = sourcePath.includes("/") ? `${sourcePath.slice(0, sourcePath.lastIndexOf("/") + 1)}${normalized}` : normalized;
-          if (!context.files.some((file) => file.relativePath === sourceDirectory || file.relativePath === normalized)) {
+          const normalized = resolveRepositoryReference(sourcePath, target);
+          if (!repositoryPathExists(context, normalized)) {
             findings.push(finding(this, context, {
               path: sourcePath,
               message: "Markdown image points to a missing repository asset.",
