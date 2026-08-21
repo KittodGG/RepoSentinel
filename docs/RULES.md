@@ -4,6 +4,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Documentation
 
+<a id="documentation.readme-exists"></a>
 ### `documentation.readme-exists`
 
 - **Severity:** warning
@@ -11,6 +12,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Readers and contributors need a clear entry point.
 - **Remediation:** Add a README with project context and a runnable Quick Start.
 
+<a id="documentation.quickstart"></a>
 ### `documentation.quickstart`
 
 - **Severity:** warning
@@ -18,6 +20,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** A project should be runnable without maintainer guidance.
 - **Remediation:** Document prerequisites, installation, and one run command.
 
+<a id="documentation.description"></a>
 ### `documentation.description`
 
 - **Severity:** info
@@ -27,6 +30,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Git hygiene
 
+<a id="gitignore.exists"></a>
 ### `gitignore.exists`
 
 - **Severity:** info
@@ -34,6 +38,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Local configuration and generated files are easier to keep out of Git.
 - **Remediation:** Add conservative patterns for dependencies, generated output, reports, and local secrets.
 
+<a id="git.large-file"></a>
 ### `git.large-file`
 
 - **Severity:** warning
@@ -41,6 +46,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Large tracked artifacts slow clones and often belong in Git LFS or release storage.
 - **Remediation:** Move the artifact to Git LFS/release storage or document why it is intentionally tracked.
 
+<a id="git.generated-tracked"></a>
 ### `git.generated-tracked`
 
 - **Severity:** warning
@@ -48,6 +54,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Accidental generated output creates noisy diffs and release drift.
 - **Remediation:** Confirm intentional versioning or ignore and untrack the generated output.
 
+<a id="branch.default"></a>
 ### `branch.default`
 
 - **Severity:** info
@@ -57,6 +64,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Security hygiene
 
+<a id="security.env-file"></a>
 ### `security.env-file`
 
 - **Severity:** error when tracked, warning when untracked
@@ -64,6 +72,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Environment files commonly contain credentials and should not be committed.
 - **Remediation:** Remove tracked files, rotate exposed credentials, and keep local files ignored. Gitignored files are still surfaced to this security rule.
 
+<a id="security.private-key"></a>
 ### `security.private-key`
 
 - **Severity:** critical
@@ -71,6 +80,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Private keys can enable unauthorized access and must not be stored in a repository.
 - **Remediation:** Remove the key from the working tree and Git history, rotate related credentials, and verify the ignore policy.
 
+<a id="security.credential-pattern"></a>
 ### `security.credential-pattern`
 
 - **Severity:** error
@@ -80,6 +90,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Package hygiene
 
+<a id="package.lockfile-single"></a>
 ### `package.lockfile-single`
 
 - **Severity:** warning
@@ -87,6 +98,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Conflicting lockfiles create ambiguous installation behavior.
 - **Remediation:** Keep the lockfile used by the selected package manager and remove stale alternatives.
 
+<a id="package.manifest-name"></a>
 ### `package.manifest-name`
 
 - **Severity:** warning
@@ -96,6 +108,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Community readiness
 
+<a id="community.license-present"></a>
 ### `community.license-present`
 
 - **Severity:** warning
@@ -103,6 +116,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Contributors need to understand how the work may be used.
 - **Remediation:** Choose an appropriate license and add it after maintainer review.
 
+<a id="community.contributing-guide"></a>
 ### `community.contributing-guide`
 
 - **Severity:** info
@@ -110,6 +124,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Setup and review expectations reduce contribution friction.
 - **Remediation:** Add `CONTRIBUTING.md` or an equivalent documented guide.
 
+<a id="community.code-of-conduct"></a>
 ### `community.code-of-conduct`
 
 - **Severity:** info
@@ -117,6 +132,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Community expectations and reporting paths should be explicit.
 - **Remediation:** Add a Code of Conduct with a private reporting path.
 
+<a id="community.issue-template"></a>
 ### `community.issue-template`
 
 - **Severity:** info
@@ -126,6 +142,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Links and assets
 
+<a id="links.valid"></a>
 ### `links.valid`
 
 - **Severity:** warning
@@ -133,6 +150,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Broken links undermine documentation trust.
 - **Remediation:** Create the referenced target or update the link.
 
+<a id="images.resolve"></a>
 ### `images.resolve`
 
 - **Severity:** warning
@@ -140,6 +158,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 - **Why it matters:** Screenshots and diagrams should render for readers.
 - **Remediation:** Add the asset or update the image reference.
 
+<a id="badges.resolve"></a>
 ### `badges.resolve`
 
 - **Severity:** info, escalated to warning for a relative badge URL
@@ -149,6 +168,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Portfolio
 
+<a id="portfolio.demo-visible"></a>
 ### `portfolio.demo-visible`
 
 - **Severity:** warning
@@ -158,6 +178,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## CI
 
+<a id="ci.workflow-permissions"></a>
 ### `ci.workflow-permissions`
 
 - **Severity:** warning
@@ -167,6 +188,7 @@ This document is the stable reference for the built-in RepoSentinel rule catalog
 
 ## Network opt-in
 
+<a id="links.network-reachable"></a>
 ### `links.network-reachable`
 
 - **Severity:** warning for failed/error responses; info when skipped by SSRF policy

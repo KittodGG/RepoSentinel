@@ -30,11 +30,11 @@ When the repository plan permits branch protection, configure `main` with the fo
 | Force pushes and branch deletion | Disabled | Preserves auditability and the default branch. |
 | Include administrators | Maintainer decision | Enable after recovery and emergency-change procedures are confirmed. |
 
-### Current limitation
+### Current branch policy
 
-GitHub returned HTTP 403 for branch-protection operations because the repository is private on a plan that does not enable this feature. GitHub reported that the repository must use GitHub Pro or be public to enable branch protection.
+Branch protection is enabled on `main` after the repository became public. The branch requires the Ubuntu and Windows Quality checks, one approving review, Code Owner review, stale-review dismissal, conversation resolution, and up-to-date branches before merge. Administrators are not forced through the rule so emergency recovery remains possible and must be documented.
 
-This is a GitHub account/plan limitation, not a RepoSentinel code or CI failure. Until the feature is available, the project relies on the Pull Request template, CODEOWNERS review requests, the successful Quality workflow, the release gate, and maintainer discipline.
+Automatic head-branch deletion is also enabled. Dependabot updates are grouped and bounded so routine maintenance remains reviewable rather than creating an uncontrolled stream of branches.
 
 ### Public-visibility maintenance checklist
 
@@ -76,11 +76,11 @@ Saat plan repository mengizinkan branch protection, gunakan pengaturan berikut p
 | Force push dan branch deletion | Disabled | Menjaga auditability dan default branch. |
 | Include administrators | Keputusan maintainer | Aktifkan setelah recovery dan emergency procedure dikonfirmasi. |
 
-### Limitasi saat ini
+### Kebijakan branch saat ini
 
-GitHub mengembalikan HTTP 403 untuk operasi branch protection karena repository private pada plan yang tidak menyediakan fitur tersebut. GitHub menyatakan repository harus menggunakan GitHub Pro atau menjadi public untuk mengaktifkan branch protection.
+Branch protection sudah aktif pada `main` setelah repository menjadi public. Branch mewajibkan Quality check Ubuntu dan Windows, satu approving review, Code Owner review, dismissal terhadap stale review, conversation resolution, serta branch yang up-to-date sebelum merge. Administrator tidak dipaksa mengikuti rule ini agar emergency recovery tetap mungkin dan harus didokumentasikan.
 
-Ini adalah limitasi account/plan GitHub, bukan kegagalan code atau CI RepoSentinel. Sampai fitur tersedia, project mengandalkan Pull Request template, review request dari CODEOWNERS, Quality workflow yang lulus, release gate, dan disiplin maintainer.
+Automatic head-branch deletion juga aktif. Update dari Dependabot sudah dikelompokkan dan dibatasi agar routine maintenance tetap dapat direview dan tidak membuat aliran branch yang tidak terkendali.
 
 ### Checklist pemeliharaan setelah visibility public
 
