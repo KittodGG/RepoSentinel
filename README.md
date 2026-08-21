@@ -6,6 +6,8 @@
 [![Local-first](https://img.shields.io/badge/privacy-local--first-67e8f9?style=for-the-badge&labelColor=07111f)](docs/RepoSentinel_Project_Context.md)
 [![Languages: EN%20%7C%20ID](https://img.shields.io/badge/languages-EN%20%7C%20ID-a78bfa?style=for-the-badge&labelColor=11102b)](docs/TECH_STACK_DECISIONS.md)
 
+![Static Sentinel Console preview](docs/assets/reposentinel-terminal-ready.png)
+
 **Repository readiness, without the noise.**  
 *Cek repository Anda sebelum orang lain menilainya.*
 
@@ -235,7 +237,7 @@ flowchart LR
 
 RepoSentinel is not a SAST replacement, enterprise secret scanner, full dependency vulnerability scanner, or formal security audit. A successful score must never be described as proof that a repository is secure. The built-in credential detector intentionally covers only documented high-confidence GitHub, Slack, and AWS prefixes; it does not claim coverage for every Google, Stripe, OpenAI, Azure, JWT, or high-entropy secret format.
 
-Configured ignore patterns prune files from the general scan. Repository `.gitignore` files remain visible as metadata, and local files matched only by repository `.gitignore` are isolated for security detectors so `.env`, key, and credential exposure can still be reported without sending their content to other rules.
+Configured ignore patterns prune files from the general scan. Repository `.gitignore` files remain visible as metadata, and local files matched only by repository `.gitignore` are isolated for security detectors so `.env`, key, and credential exposure can still be reported without sending their content to other rules. Aggregate file and byte budgets are bounded; when a limit is reached, reports expose `scanBudget.truncated: true` and the cached text-byte count instead of silently presenting a partial scan as complete.
 
 During a local scan, RepoSentinel should not send source code to a server, call the network by default, execute `npm install`, execute package scripts, run build hooks, follow symlinks outside the target root, or print secret values. Security findings must show safe path/line context and redacted evidence only.
 
@@ -255,6 +257,7 @@ During a local scan, RepoSentinel should not send source code to a server, call 
 | [License Policy](docs/LICENSE_POLICY.md) | MIT status, Apache-2.0 comparison, and migration checklist. |
 | [Stable Release Readiness](docs/RELEASE_READINESS.md) | Stable quality, security, compatibility, pilot, packaging, and rollback gates. |
 | [Rule Catalog](docs/RULES.md) | Per-rule severity, purpose, limitations, remediation, and documentation anchors. |
+| [Custom Rules](docs/CUSTOM_RULES.md) | Declarative JSON registry, absent/contains matching, and safe usage examples. |
 | [Pilot Validation](docs/PILOT_VALIDATION.md) | External validation protocol, cohort matrix, metrics, and stop conditions. |
 | [Pilot Validation Results](docs/PILOT_VALIDATION_RESULTS.md) | Measured internal and public-repository pilot results with safety boundaries. |
 
@@ -277,6 +280,7 @@ RepoSentinel adalah developer tool local-first untuk memeriksa lapisan di sekita
 | **Explainable** | Setiap finding memiliki rule ID, severity, lokasi, evidence, dampak, dan remediation. |
 | **Profile-driven** | Repository `public`, `portfolio`, `npm-package`, `academic`, `private-team`, dan `mobile-app` dapat memakai konteks pemeriksaan yang berbeda. |
 | **Safe by default** | Scanner membaca repository sebagai data dan tidak menjalankan package script atau build command. |
+| **Bounded scan** | Aggregate file dan byte budget dilaporkan melalui `scanBudget.truncated: true` ketika scan harus berhenti lebih awal. |
 | **Multilingual** | UI dan dokumentasi dapat diterjemahkan tanpa mengubah rule ID dan schema machine output. |
 
 ### Bahasa yang didukung

@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import type { RepositoryContext, RepositoryFile, ResolvedConfig } from "@reposentinel/core";
 import { enabledRules, rules, runRules, safeAutofixes } from "./index.js";
@@ -35,6 +36,11 @@ function context(profile: RepositoryContext["profile"], files: RepositoryFile[],
 }
 
 describe("rules", () => {
+  it("keeps every generated docsUrl anchor present in the public rule catalog", async () => {
+    const catalog = await readFile(new URL("../../../docs/RULES.md", import.meta.url), "utf8");
+    for (const rule of rules) expect(catalog).toContain(`<a id="${rule.id}"></a>`);
+  });
+
   it("reports missing README and .gitignore", () => {
     const result = runRules(context("public", [], {}));
     expect(result.map((finding) => finding.ruleId)).toContain("documentation.readme-exists");
