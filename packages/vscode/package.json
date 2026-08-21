@@ -29,7 +29,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.2.0",
     "@types/vscode": "^1.103.0",
     "@vscode/vsce": "^3.6.0",
     "tsup": "^8.5.0",
