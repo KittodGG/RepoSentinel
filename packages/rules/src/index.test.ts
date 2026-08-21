@@ -203,6 +203,53 @@ describe("rules", () => {
     );
   });
 
+  it("detects expanded credential prefixes but ignores short lookalikes", () => {
+    const positives = [
+      `sk_live_${"a".repeat(24)}`,
+      `rk_live_${"b".repeat(24)}`,
+      `AIza${"c".repeat(24)}`,
+      `sk-proj-${"d".repeat(24)}`,
+      `sk-${"e".repeat(24)}`,
+      `npm_${"f".repeat(24)}`,
+      `github_pat_${"g".repeat(24)}`,
+      `xoxb-${"h".repeat(24)}`,
+      `xoxp-${"i".repeat(24)}`,
+      `AKIA${"j".repeat(20)}`,
+      `ASIA${"k".repeat(20)}`,
+      `ghp_${"l".repeat(24)}`,
+      `eyJ${"m".repeat(12)}.${"n".repeat(12)}.${"o".repeat(12)}`,
+    ];
+    const negatives = [
+      "sk_live_short",
+      "rk_live_short",
+      "AIza_short",
+      "sk-proj-short",
+      "sk-short",
+      "npm_short",
+      "github_pat_short",
+      "xoxb-short",
+      "xoxp-short",
+      "AKIA_short",
+      "ASIA_short",
+      "ghp_short",
+      "eyJshort.eyJshort.eyJshort",
+    ];
+    const result = runRules(
+      context("public", [file("src/config.ts")], {
+        "src/config.ts": [...positives, ...negatives].join("\n"),
+      }),
+    );
+    const credentialFindings = result.filter(
+      (finding) => finding.ruleId === "security.credential-pattern",
+    );
+    expect(credentialFindings).toHaveLength(positives.length);
+    expect(credentialFindings.map((finding) => finding.line)).toEqual(
+      positives.map((_, index) => index + 1),
+    );
+    expect(JSON.stringify(result)).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(JSON.stringify(result)).not.toContain("mmmmmmmmmmmm");
+  });
+
   it("detects secrets from repository-gitignored security text", () => {
     const syntheticToken = ["ghp_", "1234567890abcdef"].join("");
     const result = runRules(

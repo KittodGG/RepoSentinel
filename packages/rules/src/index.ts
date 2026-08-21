@@ -293,17 +293,37 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
       const findings: Finding[] = [];
-      const pattern =
-        /\b(?:ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)[A-Za-z0-9_-]{8,}/gu;
+      const credentialPattern =
+        /\b(?:github_pat_|sk-proj-|sk_live_|rk_live_|ghp_|xoxb-|xoxp-|AIza|AKIA|ASIA|npm_|sk-)[A-Za-z0-9_-]{16,}/gu;
+      const jwtPattern =
+        /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/gu;
+      const prefixes = [
+        "github_pat_",
+        "sk-proj-",
+        "sk_live_",
+        "rk_live_",
+        "ghp_",
+        "xoxb-",
+        "xoxp-",
+        "AIza",
+        "AKIA",
+        "ASIA",
+        "npm_",
+        "sk-",
+        "eyJ",
+      ] as const;
       for (const [path, source] of securityText(context).entries()) {
         for (const [lineIndex, sourceLine] of source
           .split(/\r?\n/u)
           .entries()) {
-          const matches = [...sourceLine.matchAll(pattern)];
+          const matches = [
+            ...sourceLine.matchAll(credentialPattern),
+            ...sourceLine.matchAll(jwtPattern),
+          ].sort((left, right) => (left.index ?? 0) - (right.index ?? 0));
           for (const match of matches) {
             const value = match[0] ?? "credential";
             const prefix =
-              value.match(/^(ghp_|github_pat_|xoxb-|xoxp-|AKIA|ASIA)/u)?.[0] ??
+              prefixes.find((candidate) => value.startsWith(candidate)) ??
               "credential";
             findings.push(
               finding(this, context, {
