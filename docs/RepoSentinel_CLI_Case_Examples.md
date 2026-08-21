@@ -1,12 +1,12 @@
 # RepoSentinel — Contoh Semua Case dan Tampilan CLI
 
-**Status dokumen:** `verified beta contract + historical UX examples`
+**Status dokumen:** `verified stable-release candidate contract + illustrative UX examples`
 **Visual UI addendum:** [RepoSentinel — Visual & Interactive CLI Specification](./RepoSentinel_CLI_Visual_Interaction_Spec.md)  
-**Status produk:** `verified beta candidate; examples may include historical target-UX transcripts`
+**Status produk:** `verified stable-release candidate; examples may include illustrative target-UX transcripts`
 **Bahasa output:** Penjelasan pengguna menggunakan Bahasa Indonesia; command, rule ID, konfigurasi, dan istilah teknis tetap dalam Bahasa Inggris.  
 **Positioning:** *RepoSentinel — cek repository Anda sebelum orang lain menilainya.*
 
-> **Penting:** RepoSentinel sudah memiliki beta candidate dan command yang berstatus `Implemented` sudah diuji. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; gunakan README dan implementation execution map sebagai source untuk status aktual.
+> **Penting:** RepoSentinel memiliki stable-release candidate dan command yang berstatus `Implemented` sudah diuji. Sebagian output di dokumen ini tetap berupa contoh historis/UX transcript; gunakan README dan implementation execution map sebagai source untuk status aktual.
 
 ## 1. Tujuan Dokumen
 
@@ -971,7 +971,7 @@ Supported formats:
   json
   sarif
 
-Note: HTML report tersedia sebagai self-contained offline report pada beta contract.
+Note: HTML report tersedia sebagai self-contained offline report pada stable-release candidate contract.
 ```
 
 **Exit code:** `2`.
@@ -984,7 +984,7 @@ $ reposentinel report . --format json --output report.json
 Report written to /workspace/project/report.json
 ```
 
-`report` tidak membaca hasil scan historis. Pada beta ini, `report <path>` adalah alias deterministik dari `check <path>` dengan pilihan format dan output file.
+`report` tidak membaca hasil scan historis. Pada release candidate ini, `report <path>` adalah alias deterministik dari `check <path>` dengan pilihan format dan output file.
 
 ## 16. Case M — Baseline
 

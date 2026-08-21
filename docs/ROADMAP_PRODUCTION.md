@@ -1,16 +1,16 @@
-# RepoSentinel — Roadmap Tahapan dari Repository sampai Beta Production
+# RepoSentinel — Roadmap Tahapan dari Repository sampai Stable Production
 
-**Status:** `planned`  
+**Status:** `active production roadmap`  
 **Baseline:** CLI-first, local-first, deterministic, explainable  
-**Target akhir dokumen:** beta production yang dapat dipakai pengguna eksternal secara terbatas, dengan CLI package, report output, CI integration dasar, dokumentasi, fixture suite, dan release process yang dapat diulang.
+**Target akhir dokumen:** stable production release yang dapat dipakai pengguna eksternal, dengan CLI package, report output, CI integration, dokumentasi bilingual, fixture suite, pilot evidence, dan release process yang dapat diulang.
 
 > **Catatan status:** Repository GitHub dan dokumen fondasi dapat dibuat terlebih dahulu. Core scanner, package npm, GitHub Action, domain dokumentasi, serta command target tidak boleh disebut `implemented` atau `verified` sebelum kode, test, dan artefak release benar-benar tersedia dan diuji.
 
-## 1. Definisi Selesai untuk Beta Production
+## 1. Definisi Selesai untuk Stable Production
 
-Beta production bukan sekadar repository yang berisi source code. Beta production berarti seorang developer baru dapat meng-install atau menjalankan CLI, memindai repository kecil secara lokal, memahami finding, memperbaiki masalah, menghasilkan report, dan menjalankan kembali scan dengan hasil yang konsisten. Sistem juga harus aman ketika menghadapi repository yang tidak terpercaya.
+Stable production bukan sekadar repository yang berisi source code. Stable production berarti seorang developer baru dapat meng-install atau menjalankan CLI, memindai repository kecil secara lokal, memahami finding, memperbaiki masalah, menghasilkan report, dan menjalankan kembali scan dengan hasil yang konsisten. Sistem juga harus aman ketika menghadapi repository yang tidak terpercaya.
 
-| Dimensi | Gate beta production |
+| Dimensi | Gate stable production |
 |---|---|
 | Functional | `check`, profile, config, terminal, Markdown, JSON, dan exit threshold bekerja pada fixture suite. |
 | Quality | Minimal 15 rule memiliki positive fixture, negative fixture, regression test, evidence, remediation, dan dokumentasi. |
@@ -18,7 +18,7 @@ Beta production bukan sekadar repository yang berisi source code. Beta productio
 | UX | Interactive TUI rapi pada TTY; plain/CI/JSON output stabil dan tidak memiliki ANSI escape atau spinner. |
 | Distribution | Package versioned, changelog, release tag, installation instructions, dan rollback path tersedia. |
 | CI | Pull request menjalankan lint/typecheck/unit/integration/fixture test dan branch utama terlindungi. |
-| Beta evidence | Minimal 10 external users atau setara sesi uji terstruktur memberi feedback yang dapat ditindaklanjuti. |
+| Production evidence | External pilot dan sesi uji terstruktur memberi feedback yang dapat ditindaklanjuti. |
 | Operational | Issue template, bug triage, support boundary, telemetry/privacy statement, dan release checklist tersedia. |
 
 ## 2. Urutan Tahapan Utama
@@ -36,8 +36,8 @@ Beta production bukan sekadar repository yang berisi source code. Beta productio
 | 8 | Package dan local release | Build, pack, install smoke test, versioning, changelog | `planned` |
 | 9 | CI dan GitHub Action | PR checks, SARIF target, least-privilege workflow | `planned` |
 | 10 | Dogfooding dan hardening | RepoSentinel scan terhadap dirinya sendiri, performance/security fixes | `planned` |
-| 11 | Closed beta | Release pre-release, feedback protocol, 3–10 pilot repositories | `planned` |
-| 12 | Beta production | Public beta gate, release notes, support/triage, post-beta decision | `planned` |
+| 11 | External pilot validation | Feedback protocol, representative repositories, and measured acceptance results | `planned` |
+| 12 | Stable production | Stable release gate, release notes, support/triage, rollback, and visibility approval | `planned` |
 
 Tahapan dilakukan berurutan. Sebuah tahap dapat memiliki beberapa pull request, tetapi tidak boleh melompati release gate hanya karena happy path sudah berhasil.
 
@@ -76,7 +76,7 @@ Mencegah branch utama berubah tanpa review, test, dan status check yang diperluk
 2. Menetapkan branch kerja `feature/<area>-<short-name>`, `fix/<area>-<short-name>`, dan `docs/<topic>`.
 3. Menambahkan pull request template yang mewajibkan context, problem, proposed solution, acceptance criteria, testing, security impact, dan risk.
 4. Menambahkan issue template untuk bug, rule proposal, feature proposal, security concern, dan UX feedback.
-5. Menambahkan label `P0`, `P1`, `P2`, `rule`, `core`, `cli`, `reporter`, `security`, `docs`, `beta`, dan `blocked`.
+5. Menambahkan label `P0`, `P1`, `P2`, `rule`, `core`, `cli`, `reporter`, `security`, `docs`, `pre-stable`, dan `blocked`.
 6. Menambahkan `CODEOWNERS` untuk `packages/core`, `packages/rules`, `packages/cli`, `packages/reporters`, dan `.github/workflows` ketika maintainer kedua sudah tersedia.
 7. Mengaktifkan ruleset/branch protection secara bertahap: pull request required, status checks required, conversation resolution, no force push, no deletion. Saat project sudah memiliki reviewer, aktifkan minimum satu approval untuk perubahan code.
 8. Menetapkan merge method. Squash merge direkomendasikan untuk menjaga histori feature tetap ringkas.
@@ -107,7 +107,7 @@ reposentinel/
 ├── docs/
 │   ├── rules/
 │   ├── profiles/
-│   └── ROADMAP_BETA_PRODUCTION.md
+│   └── ROADMAP_PRODUCTION.md
 ├── fixtures/
 ├── packages/
 │   ├── cli/
@@ -320,7 +320,7 @@ Memastikan CLI yang dibuat dapat dipasang dan dijalankan dari package artifact, 
 4. Install tarball ke temporary directory dan jalankan `--help`, `--version`, `check`, `report`, serta failure path.
 5. Uji Node.js support matrix yang dijanjikan.
 6. Buat changelog dan release notes berbasis perubahan yang dapat diverifikasi.
-7. Tetapkan versioning dan pre-release naming, misalnya `0.1.0-beta.1`.
+7. Tetapkan stable versioning, misalnya `1.0.0`, dan simpan prerelease versions hanya sebagai release history.
 8. Jangan mempublikasikan package sebelum package metadata, README install, provenance, dan rollback path diverifikasi.
 
 ### Definition of done
@@ -371,11 +371,11 @@ Menggunakan RepoSentinel untuk memeriksa repository RepoSentinel sendiri dan men
 
 Repository RepoSentinel memperoleh scan yang dapat dipahami, tidak memiliki critical/error yang belum ditinjau, fixture regression tetap hijau, dan batasan produk terlihat jelas.
 
-## 14. Tahap 11 — Closed Beta
+## 14. Tahap 11 — External Pilot Validation
 
 ### Tujuan
 
-Menguji produk pada sejumlah kecil pengguna nyata sebelum membuka beta yang lebih luas.
+Menguji produk pada sejumlah kecil pengguna nyata sebelum stable publication.
 
 ### Pekerjaan satu per satu
 
@@ -383,12 +383,12 @@ Menguji produk pada sejumlah kecil pengguna nyata sebelum membuka beta yang lebi
 2. Berikan command install dan satu tugas sederhana tanpa live coaching.
 3. Ukur waktu dari install sampai scan pertama, waktu memahami finding, dan waktu mendapatkan scan kedua yang lebih baik.
 4. Kumpulkan feedback terstruktur untuk relevansi finding, false positive, UI clarity, performance, privacy, dan output CI.
-5. Catat issue dengan label `beta`, `ux`, `false-positive`, `rule-gap`, `crash`, dan `docs-gap`.
+5. Catat issue dengan label `pilot`, `ux`, `false-positive`, `rule-gap`, `crash`, dan `docs-gap`.
 6. Prioritaskan perbaikan P0/P1 yang menghalangi scan atau menimbulkan risiko keamanan.
-7. Jangan menambah dashboard, AI reviewer, marketplace rule, atau multi-repository SaaS hanya karena feedback beta meminta permukaan baru; validasi core CLI terlebih dahulu.
-8. Potong release candidate `0.1.0-beta.1` dari tag yang reproducible.
+7. Jangan menambah dashboard, AI reviewer, marketplace rule, atau multi-repository SaaS hanya karena pilot feedback meminta permukaan baru; validasi core CLI terlebih dahulu.
+8. Potong stable candidate `1.0.0` dari tag yang reproducible.
 
-### Gate closed beta
+### External pilot gate
 
 | Sinyal | Minimum target |
 |---|---:|
@@ -398,31 +398,31 @@ Menguji produk pada sejumlah kecil pengguna nyata sebelum membuka beta yang lebi
 | Crash pada fixture suite | <2% |
 | Pilot session dengan scan kedua berhasil | Mayoritas sesi |
 
-Target tersebut berasal dari target beta RepoSentinel dan harus diperlakukan sebagai target validasi, bukan hasil yang sudah tercapai. [1]
+Target tersebut berasal dari the original RepoSentinel release target dan harus diperlakukan sebagai target validasi, bukan hasil yang sudah tercapai. [1]
 
-## 15. Tahap 12 — Beta Production
+## 15. Tahap 12 — Stable Production
 
 ### Tujuan
 
-Menerbitkan beta yang dapat dipakai secara nyata oleh pengguna terbatas atau publik dengan release discipline, dokumentasi, dan jalur pemulihan.
+Menerbitkan stable release yang dapat dipakai secara nyata oleh pengguna dengan release discipline, dokumentasi, dan jalur pemulihan.
 
 ### Pekerjaan satu per satu
 
-1. Bekukan schema finding dan command public untuk versi beta; perubahan breaking harus dicatat.
+1. Bekukan schema finding dan command public untuk stable release; perubahan breaking harus dicatat.
 2. Jalankan full quality gate pada clean checkout: lint, typecheck, unit, integration, fixture, snapshot, security, performance, package smoke test, dan documentation link checks yang tidak memerlukan network default.
 3. Audit output terminal pada TTY interaktif, Windows Terminal, Linux SSH, terminal 16-color, `NO_COLOR`, pipe, `CI=true`, dan JSON parser.
 4. Audit redaction dengan fixture secret dan pastikan value tidak muncul di stdout, stderr, report file, snapshot, atau workflow logs.
 5. Review permissions dan action dependencies. GitHub menyarankan least privilege untuk `GITHUB_TOKEN`, masking sensitive data, audit workflow logs, dan pinning third-party action ketika digunakan. [5]
-6. Buat tag release `v0.1.0-beta.1` dan GitHub pre-release. GitHub Releases berbasis tag dan dapat memaketkan release notes serta assets yang dapat diunduh. [6]
-7. Publikasikan release notes yang menyebut status beta, supported Node versions, known limitations, migration note, dan cara melaporkan bug.
+6. Buat tag stable release `v1.0.0` dan GitHub release. GitHub Releases berbasis tag dan dapat memaketkan release notes serta assets yang dapat diunduh. [6]
+7. Publikasikan release notes yang menyebut release status, supported Node versions, known limitations, migration note, dan cara melaporkan bug.
 8. Publikasikan package hanya setelah nama package, provenance, README, install smoke test, dan ownership benar-benar diverifikasi.
 9. Sediakan rollback: versi package sebelumnya, cara menurunkan versi, cara menonaktifkan Action, dan cara menghapus baseline/report artifact.
-10. Pantau issue, crash report, failed CI example, dan feedback UX selama window beta.
-11. Jadwalkan evaluasi akhir beta berdasarkan data, bukan jumlah star saja.
+10. Pantau issue, crash report, failed CI example, dan feedback UX selama release-monitoring window.
+11. Jadwalkan evaluasi akhir validation cycle berdasarkan data, bukan jumlah star saja.
 
-### Beta production release gate
+### Stable production release gate
 
-Beta dapat disebut production-ready untuk penggunaan beta apabila semua pernyataan berikut benar.
+Stable dapat disebut production-ready apabila semua pernyataan berikut benar.
 
 | Gate | Pertanyaan verifikasi |
 |---|---|
@@ -434,7 +434,7 @@ Beta dapat disebut production-ready untuk penggunaan beta apabila semua pernyata
 | CI | Apakah PR dapat gagal konsisten berdasarkan threshold? |
 | Release | Apakah tag, package artifact, changelog, dan release notes cocok? |
 | Support | Apakah pengguna tahu cara melaporkan bug dan memahami limitation? |
-| Recovery | Apakah ada rollback path jika beta merusak workflow? |
+| Recovery | Apakah ada rollback path jika stable release merusak workflow? |
 | Evidence | Apakah data pilot mendukung relevansi, usability, dan performa minimum? |
 
 ## 16. Checklist Eksekusi Harian
@@ -480,25 +480,25 @@ Issue di bawah dapat dijadikan backlog awal agar implementasi berjalan satu per 
 | RS-016 | Add package build and install smoke test | P0 | RS-013 |
 | RS-017 | Add GitHub Action and SARIF | P1 | RS-012, RS-015 |
 | RS-018 | Dogfood RepoSentinel against itself | P0 | RS-013, RS-016 |
-| RS-019 | Run closed beta pilot | P0 | RS-018 |
-| RS-020 | Publish beta production release | P0 | RS-019 |
+| RS-019 | Run external pilot validation | P0 | RS-018 |
+| RS-020 | Publish stable production release | P0 | RS-019 |
 
-## 18. Keputusan yang Harus Dikunci Sebelum Beta
+## 18. Keputusan yang Harus Dikunci Sebelum Stable Release
 
 | Keputusan | Default sederhana | Batas waktu |
 |---|---|---|
 | Package name | `reposentinel` jika tersedia dan dapat diverifikasi | Sebelum package publish |
 | CLI framework | Commander atau alternatif sederhana yang dipilih di scaffold | Tahap 2 |
-| Health score formula | Formula awal dengan kalibrasi fixture/user test | Sebelum beta |
+| Health score formula | Formula awal dengan kalibrasi fixture/user test | Sebelum stable release |
 | Secret detection scope | High-confidence heuristics + redaction, bukan full scanner | Tahap 4–5 |
-| HTML report | Tidak masuk core beta kecuali ada alasan kuat | Setelah CLI stabil |
-| Profile tambahan | `academic`/`private-team` setelah profile MVP tervalidasi | Setelah closed beta |
+| HTML report | Tidak masuk core stable kecuali ada alasan kuat | Setelah CLI stabil |
+| Profile tambahan | `academic`/`private-team` setelah profile MVP tervalidasi | Setelah external pilot validation |
 | Network rules | Off by default, explicit opt-in | Sebelum rule remote |
-| Release channel | `beta` via GitHub pre-release dan package pre-release | Tahap 12 |
+| Release channel | `stable` via GitHub release dan npm `latest` | Tahap 12 |
 
-## 19. Post-Beta Decision
+## 19. Post-Release Decision
 
-Pada akhir beta, keputusan tidak otomatis berarti menambah fitur. Evaluasi harus menjawab apakah core CLI dipercaya. Jika fresh user berhasil scan, finding dianggap relevan, false positive masih terkendali, output CI stabil, dan security boundary lulus, project dapat bergerak ke v0.2 atau stable planning. Jika tidak, hentikan penambahan surface baru dan fokus pada schema, rules, UX, performance, dan dokumentasi.
+Pada akhir validation cycle, keputusan tidak otomatis berarti menambah fitur. Evaluasi harus menjawab apakah core CLI dipercaya. Jika fresh user berhasil scan, finding dianggap relevan, false positive masih terkendali, output CI stabil, dan security boundary lulus, project dapat bergerak ke post-release feature planning. Jika tidak, hentikan penambahan surface baru dan fokus pada schema, rules, UX, performance, dan dokumentasi.
 
 ## References
 

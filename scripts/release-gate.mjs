@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const root = new URL("..", import.meta.url).pathname.replace(/\/$/u, "");
+const root = fileURLToPath(new URL("..", import.meta.url));
 const artifactDir = join(root, "artifacts");
 const stagedPackage = join(artifactDir, "package");
 const packageJson = JSON.parse(await readFile(join(stagedPackage, "package.json"), "utf8"));

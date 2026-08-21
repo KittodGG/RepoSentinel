@@ -1,7 +1,7 @@
 # RepoSentinel — Multilingual Architecture and Tech Stack Decisions
 
 **Status:** `proposed`  
-**Decision scope:** CLI MVP through beta production  
+**Decision scope:** CLI MVP through stable production
 **Decision date:** 20 August 2026
 
 ## 1. Decision Summary

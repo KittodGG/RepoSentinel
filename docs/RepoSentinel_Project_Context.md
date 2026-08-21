@@ -35,7 +35,7 @@ Keputusan berikut dianggap sebagai baseline dan jangan diubah tanpa alasan yang 
 | Privasi | Source code tidak dikirim ke server pada local scan. Network rule harus opt-in. |
 | Arsitektur | Core engine deterministic, rule modular, reporter terpisah. |
 | Urutan pengembangan | Core schema → CLI → rule pack → output → GitHub Action → profiles → extension → local dashboard. |
-| Auto-fix | Tidak masuk initial MVP; current beta hanya mengizinkan allowlisted safe templates melalui dry-run/apply eksplisit. |
+| Auto-fix | Tidak masuk initial MVP; current release candidate hanya mengizinkan allowlisted safe templates melalui dry-run/apply eksplisit. |
 | AI | Tidak menjadi dependency inti MVP. Jangan mulai dari fitur AI atau dashboard. |
 | Lisensi/repository profil | Jangan membuat atau mengubah LICENSE/CONTRIBUTING pada repository KittodGG tanpa permintaan eksplisit. Ini berbeda dari rule RepoSentinel yang boleh mendeteksi apakah dokumen tersebut tersedia. |
 | Gaya komunikasi | Jelaskan perbedaan antara fitur yang sudah ada, rancangan target, dan ide backlog. Jangan menyatakan fitur sudah live bila belum diuji. |
@@ -481,7 +481,7 @@ Wajib mencakup unit test detector/parser/score, fixture test, snapshot output, i
 
 ## 16. Metrik Keberhasilan
 
-| Metrik | Target beta |
+| Metrik | Stable-release validation target |
 |---|---:|
 | Fresh user berhasil scan pertama | ≥70% |
 | Median install sampai report | <5 menit |

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0 — stable candidate, 21 August 2026
+
+### Verified
+
+- Completed the bilingual governance overhaul, audit correction response, security hardening, deterministic fixture matrix, internal/public pilot validation, dependency audit, packaging gate, and GitHub Quality CI.
+- Added truthful network-state metadata across terminal, Markdown, JSON, SARIF, and HTML reports.
+- Added internal/private-address blocking for opt-in network checks, match-only secret evidence, full generic redaction, Markdown escaping, critical-baseline refusal, safe Git-ref validation, repository `.gitignore` integration, aggregate scan budgets, recommended configuration semantics, unknown-rule validation, deduplicated SARIF rules, explicit positive custom-rule matching, portable release scripts, and pinned workflow actions.
+
+### Publication status
+
+- Stable npm publication and GitHub `v1.0.0` release are prepared but remain pending the final publication command and registry verification.
+
 ## 0.1.0-beta.2 — 21 August 2026
 
 ### Fixed

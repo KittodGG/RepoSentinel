@@ -10,7 +10,7 @@ Implementasi harus mempertahankan prinsip berikut: scanner local-first, network 
 
 | Item | Status |
 |---|---|
-| GitHub branch | `main` tersinkron ke `820e6f5` |
+| GitHub branch | `main` tersinkron ke `e05382d` |
 | User change | `docs/assets/reposentinel-banner.svg` sudah di-pull dengan fast-forward |
 | Banner audit | Browser-rendered dan visual layout terverifikasi |
 | Runtime target | Node.js 24 LTS |
@@ -56,11 +56,11 @@ The CLI and strict config schema support `academic`, `private-team`, and `mobile
 
 ### VS Code package
 
-The optional local diagnostics adapter is typechecked, built, and packaged as `reposentinel-diagnostics-0.1.0-beta.1.vsix`. The VSIX contains its CommonJS entrypoint, manifest, README, and MIT license. Marketplace publication is intentionally separate and requires maintainer identity and release approval.
+The optional local diagnostics adapter is typechecked and built for the prepared `1.0.0` candidate. The VSIX contains its CommonJS entrypoint, manifest, README, and MIT license. Marketplace publication is intentionally separate and requires maintainer identity and release approval.
 
 ### Contribution governance
 
-The repository now includes a complete contributor guide, Pull Request template, bug/feature/beta/question/documentation Issue templates, GitHub Issue contact links, Code of Conduct, Security Policy, and license decision record.
+The repository now includes a complete bilingual contributor guide, Pull Request template, bug/feature/feedback/question/documentation Issue templates, GitHub Issue contact links, Code of Conduct, Security Policy, and license decision record.
 
 ### Npm publication
 
@@ -110,4 +110,4 @@ If a feature cannot satisfy its security or determinism requirement, it must rem
 
 ## Progress status
 
-Current status: **Phases 1–15/15 are complete**. Rule completeness, changed-files mode, HTML reporting, npm artifact release gate, safe autofix, watch mode, VS Code diagnostics, custom rule registry, opt-in network checker, local multi-repository dashboard, performance benchmark, snapshot tests, documentation, final regression, packaging, commit/push, and GitHub quality CI are implemented and validated. The only external release blocker is npm authentication and explicit publication approval; the manual workflow is prepared but has not been executed without an npm publisher identity.
+Current status: **Phases 1–15/15 are implemented and validated**. Rule completeness, changed-files mode, HTML reporting, package release gate, safe autofix, watch mode, VS Code diagnostics, custom rule registry, opt-in network checker, local multi-repository dashboard, performance benchmark, snapshot tests, bilingual governance, audit hardening, pilot validation, packaging, commit/push, dependency audit, and GitHub quality CI are implemented and validated. The remaining release decision is explicit maintainer approval for stable npm publication, stable GitHub release/tag, and the separate private-to-public visibility transition.
