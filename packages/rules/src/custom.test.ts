@@ -90,6 +90,74 @@ describe("custom rule registry", () => {
     );
   });
 
+  it("matches recursive globs at repository root and nested paths", () => {
+    const [rule] = loadCustomRules(
+      JSON.stringify([
+        {
+          id: "custom.markdown-policy",
+          severity: "warning",
+          path: "**/*.md",
+          match: "contains",
+          contentIncludes: "TODO",
+          message: "TODO marker remains.",
+          remediation: "Resolve the TODO marker.",
+        },
+      ]),
+    );
+    const files = [
+      {
+        relativePath: "README.md",
+        absolutePath: "/fixture/README.md",
+        kind: "text" as const,
+        sizeBytes: 10,
+        isIgnored: false,
+      },
+      {
+        relativePath: "docs/a/guide.md",
+        absolutePath: "/fixture/docs/a/guide.md",
+        kind: "text" as const,
+        sizeBytes: 10,
+        isIgnored: false,
+      },
+    ];
+    expect(
+      rule?.run(
+        context(files, {
+          "README.md": "TODO",
+          "docs/a/guide.md": "TODO",
+        }),
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("supports a single-character custom glob wildcard", () => {
+    const [rule] = loadCustomRules(
+      JSON.stringify([
+        {
+          id: "custom.config-policy",
+          severity: "warning",
+          path: "config.?.json",
+          match: "contains",
+          contentIncludes: "TODO",
+          message: "TODO marker remains.",
+          remediation: "Resolve the TODO marker.",
+        },
+      ]),
+    );
+    const files = [
+      {
+        relativePath: "config.a.json",
+        absolutePath: "/fixture/config.a.json",
+        kind: "text" as const,
+        sizeBytes: 10,
+        isIgnored: false,
+      },
+    ];
+    expect(rule?.run(context(files, { "config.a.json": "TODO" }))).toHaveLength(
+      1,
+    );
+  });
+
   it("rejects invalid IDs and duplicate IDs", () => {
     expect(() =>
       loadCustomRules(

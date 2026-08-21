@@ -41,11 +41,20 @@ function globToRegExp(pattern: string): RegExp {
   let source = "^";
   for (let index = 0; index < pattern.length; index += 1) {
     const character = pattern[index];
-    if (character === "*" && pattern[index + 1] === "*") {
+    if (
+      character === "*" &&
+      pattern[index + 1] === "*" &&
+      pattern[index + 2] === "/"
+    ) {
+      source += "(?:.*/)?";
+      index += 2;
+    } else if (character === "*" && pattern[index + 1] === "*") {
       source += ".*";
       index += 1;
     } else if (character === "*") {
       source += "[^/]*";
+    } else if (character === "?") {
+      source += "[^/]";
     } else {
       source += character
         ? character.replace(/[.+?^${}()|[\]\\]/gu, "\\$&")

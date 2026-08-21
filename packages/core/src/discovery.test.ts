@@ -119,6 +119,14 @@ describe("safe discovery", () => {
     ).rejects.toThrow("Invalid Git base ref");
   });
 
+  it("sanitizes unknown Git base-ref failures", async () => {
+    const root = await mkdtemp(join(tmpdir(), "reposentinel-missing-ref-"));
+    await execFile("git", ["-C", root, "init", "--quiet"]);
+    await expect(readChangedPaths(root, "origin/missing")).rejects.toThrow(
+      'Base ref "origin/missing" was not found or could not be compared',
+    );
+  });
+
   it("returns deterministic paths changed from a Git base commit", async () => {
     const root = await mkdtemp(join(tmpdir(), "reposentinel-changed-"));
     await execFile("git", ["-C", root, "init", "--quiet"]);

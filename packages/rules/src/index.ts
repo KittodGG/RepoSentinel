@@ -92,6 +92,33 @@ function textForCanonicalPath(
   return file ? context.textCache.get(file.relativePath) : undefined;
 }
 
+function actualCanonicalPath(context: RepositoryContext, path: string): string {
+  return (
+    context.files.find(
+      (file) =>
+        matchesCanonicalPath(file.relativePath, path) && !file.isIgnored,
+    )?.relativePath ?? path
+  );
+}
+
+function maskMarkdownCode(source: string): string {
+  const fenced = source.replace(
+    /^ {0,3}(```|~~~)[\s\S]*?^ {0,3}\1[^\n]*$/gmu,
+    (match) => match.replace(/[^\n]/gu, " "),
+  );
+  return fenced.replace(/`[^`\n]*`/gu, (match) => " ".repeat(match.length));
+}
+
+function markdownDestination(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("<")) {
+    const closing = trimmed.indexOf(">");
+    return closing > 0 ? trimmed.slice(1, closing) : "";
+  }
+  return trimmed.split(/\s+/u)[0] ?? "";
+}
+
 function hasPullRequestTargetTrigger(source: string): boolean {
   try {
     const document = parse(source) as JsonRecord | null;
@@ -148,7 +175,8 @@ function firstTextLine(
   path: string,
   predicate: (line: string) => boolean,
 ): number | undefined {
-  const source = context.textCache.get(path);
+  const source =
+    context.textCache.get(path) ?? textForCanonicalPath(context, path);
   if (!source) return undefined;
   const index = source.split(/\r?\n/u).findIndex(predicate);
   return index >= 0 ? index + 1 : undefined;
@@ -193,7 +221,82 @@ function containsDistReference(value: unknown): boolean {
   return false;
 }
 
-function packageHasApplicationSignals(data: JsonRecord): boolean {
+const connectionPlaceholderPattern =
+  /\$\{|\{\{|<[a-z_]+>|%[sd]|\*{2,}|\bYOUR_|\bxxx/iu;
+const genericConnectionUserPattern =
+  /^(?:user|username|admin|root|login|name)$/iu;
+const genericConnectionPasswordPattern =
+  /^(?:pass|password|passwd|secret|token|changeme|hunter2)$/iu;
+
+function isInsideBacktick(source: string, index: number): boolean {
+  let backticks = 0;
+  for (let cursor = 0; cursor < index; cursor += 1) {
+    if (source[cursor] === "`") backticks += 1;
+  }
+  return backticks % 2 === 1;
+}
+
+function isRealConnectionString(raw: string): boolean {
+  if (connectionPlaceholderPattern.test(raw)) return false;
+  const credentials = raw.match(
+    /^[a-z][a-z0-9+.-]*:\/\/([^:@\s]+):([^@\s]+)@/iu,
+  );
+  if (!credentials) return false;
+  const user = credentials[1] ?? "";
+  const password = credentials[2] ?? "";
+  if (password.length < 6) return false;
+  return !(
+    genericConnectionUserPattern.test(user) &&
+    genericConnectionPasswordPattern.test(password)
+  );
+}
+
+function isPlausibleJwt(token: string): boolean {
+  const [header, payload, signature] = token.split(".");
+  if (!header || !payload || !signature) return false;
+  if (
+    !/^[A-Za-z0-9_-]{8,}$/u.test(header) ||
+    !/^[A-Za-z0-9_-]{8,}$/u.test(payload) ||
+    !/^[A-Za-z0-9_-]{20,}$/u.test(signature)
+  )
+    return false;
+  try {
+    const parsed: unknown = JSON.parse(
+      Buffer.from(header, "base64url").toString("utf8"),
+    );
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "alg" in parsed &&
+      typeof parsed.alg === "string" &&
+      /^(?:HS|RS|ES|PS)(?:256|384|512)$/u.test(parsed.alg)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isLikelyFixturePath(path: string): boolean {
+  return /(?:^|\/)(?:test|tests|testdata|fixtures|examples?|__fixtures__)(?:\/|$)/iu.test(
+    path,
+  );
+}
+
+function isLikelyTestCertificatePath(path: string): boolean {
+  const normalized = path.toLowerCase();
+  const explicitFixture =
+    /(?:^|\/)(?:testdata|tests\/certs|fixtures\/certs|__fixtures__)(?:\/|$)/u.test(
+      normalized,
+    );
+  const segments = normalized.split("/");
+  const hasTestSegment = segments.some((segment) => segment.includes("test"));
+  const hasCertificateSegment = segments.some((segment) =>
+    segment.includes("cert"),
+  );
+  return explicitFixture || (hasTestSegment && hasCertificateSegment);
+}
+
+function packageHasApplicationSignals(data: JsonRecord) {
   if (typeof data.packageManager === "string") return true;
   if (data.workspaces !== undefined) return true;
   const scripts = data.scripts;
@@ -284,10 +387,10 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
-      const path = "README.md";
-      const source = textForCanonicalPath(context, path) ?? "";
+      const path = actualCanonicalPath(context, "README.md");
+      const source = textForCanonicalPath(context, "README.md") ?? "";
       const hasHeading =
-        /(^|\n)#+\s*(quick\s*start|getting\s*started|installation|setup)\b/iu.test(
+        /(^|\n)#+\s*(quick\s*start|getting\s*started|install(?:ation)?|setup|usage)\b/iu.test(
           source,
         );
       const hasCommand =
@@ -315,6 +418,7 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "info",
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
+      const path = actualCanonicalPath(context, "README.md");
       const source = textForCanonicalPath(context, "README.md") ?? "";
       const lines = source
         .split(/\r?\n/u)
@@ -334,7 +438,7 @@ export const rules: readonly RuleDefinition[] = [
             finding(this, context, {
               message:
                 "README does not have a clear project description near the top.",
-              path: "README.md",
+              path,
               remediation:
                 "Describe the problem, primary capability, and intended user in one or two sentences.",
             }),
@@ -402,15 +506,21 @@ export const rules: readonly RuleDefinition[] = [
         for (const match of source.matchAll(privateKeyPattern)) {
           const matchIndex = match.index ?? 0;
           const line = source.slice(0, matchIndex).split(/\r?\n/u).length;
+          const testCertificate = isLikelyTestCertificatePath(path);
           findings.push(
             finding(this, context, {
-              severity: "critical",
+              severity: testCertificate ? "info" : "critical",
               path,
               line,
-              message: "Private key material detected.",
-              evidence: "Private-key material detected; key body redacted.",
-              remediation:
-                "Remove the key from the repository and Git history, rotate related credentials, and verify the ignore rule.",
+              message: testCertificate
+                ? "Private key material detected in a test-certificate fixture."
+                : "Private key material detected.",
+              evidence: testCertificate
+                ? "Test-certificate private-key material detected; key body redacted."
+                : "Private-key material detected; key body redacted.",
+              remediation: testCertificate
+                ? "Confirm this is a disposable test certificate, keep it non-production, and rotate or remove it if it was ever used outside tests."
+                : "Remove the key from the repository and Git history, rotate related credentials, and verify the ignore rule.",
             }),
           );
         }
@@ -471,14 +581,20 @@ export const rules: readonly RuleDefinition[] = [
           .entries()) {
           const matches = [
             ...sourceLine.matchAll(credentialPattern),
-            ...sourceLine.matchAll(jwtPattern),
-            ...extendedCredentialPatterns.flatMap(({ pattern }) =>
-              [...sourceLine.matchAll(pattern)].map((match) => ({
-                ...match,
-                extendedPrefix: extendedCredentialPatterns.find(
-                  (item) => item.pattern.source === pattern.source,
-                )?.prefix,
-              })),
+            ...[...sourceLine.matchAll(jwtPattern)].filter((match) =>
+              isPlausibleJwt(match[0] ?? ""),
+            ),
+            ...extendedCredentialPatterns.flatMap(({ pattern, prefix }) =>
+              [...sourceLine.matchAll(pattern)]
+                .filter((match) => {
+                  if (prefix !== "connection-string://") return true;
+                  const value = match[0] ?? "";
+                  return (
+                    !isInsideBacktick(sourceLine, match.index ?? 0) &&
+                    isRealConnectionString(value)
+                  );
+                })
+                .map((match) => ({ ...match, extendedPrefix: prefix })),
             ),
           ].sort((left, right) => (left.index ?? 0) - (right.index ?? 0));
           for (const match of matches) {
@@ -489,7 +605,12 @@ export const rules: readonly RuleDefinition[] = [
               "credential";
             findings.push(
               finding(this, context, {
-                severity: "error",
+                severity:
+                  prefix === "connection-string://"
+                    ? "warning"
+                    : isLikelyFixturePath(path)
+                      ? "info"
+                      : "error",
                 path,
                 line: lineIndex + 1,
                 message: "A high-confidence credential pattern was detected.",
@@ -694,7 +815,8 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["npm-package"],
     run(context) {
-      const source = context.textCache.get("package.json");
+      const manifestPath = actualCanonicalPath(context, "package.json");
+      const source = textForCanonicalPath(context, "package.json");
       if (!source) return [];
       try {
         const manifest = JSON.parse(source) as { name?: unknown };
@@ -708,7 +830,7 @@ export const rules: readonly RuleDefinition[] = [
         return [
           finding(this, context, {
             message: "package.json could not be parsed.",
-            path: "package.json",
+            path: manifestPath,
             remediation:
               "Fix package.json syntax before publishing the package.",
           }),
@@ -731,13 +853,14 @@ export const rules: readonly RuleDefinition[] = [
     defaultSeverity: "warning",
     profiles: ["public", "npm-package"],
     run(context) {
-      const present = [
-        "LICENSE",
-        "LICENSE.md",
-        "LICENSE.txt",
-        "COPYING",
-        "COPYING.md",
-      ].some((path) => fileExists(context, path));
+      const present = context.files.some(
+        (file) =>
+          !file.isIgnored &&
+          !file.relativePath.includes("/") &&
+          /^(?:LICEN[CS]E|COPYING)(?:[.\-_][\w.-]+)?$/iu.test(
+            file.relativePath,
+          ),
+      );
       return present
         ? []
         : [
@@ -758,11 +881,12 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio", "npm-package"],
     run(context) {
       const findings: Finding[] = [];
-      const linkPattern = /!?\[[^\]]*\]\(([^)]+)\)/gu;
+      const linkPattern = /!?\[[^\]]*\]\(([^)\n]+)\)/gu;
       for (const [sourcePath, source] of context.textCache.entries()) {
         if (!sourcePath.toLowerCase().endsWith(".md")) continue;
-        for (const match of source.matchAll(linkPattern)) {
-          const target = match[1]?.trim().split(/\s+/u)[0] ?? "";
+        const scanSource = maskMarkdownCode(source);
+        for (const match of scanSource.matchAll(linkPattern)) {
+          const target = markdownDestination(match[1] ?? "");
           if (!target || target.startsWith("#") || target.startsWith("mailto:"))
             continue;
           if (/^https?:\/\//iu.test(target)) {
@@ -781,6 +905,7 @@ export const rules: readonly RuleDefinition[] = [
             }
             continue;
           }
+          if (target.startsWith("/")) continue;
           const normalized = resolveRepositoryReference(sourcePath, target);
           const exists = repositoryPathExists(context, normalized);
           if (!exists) {
@@ -807,11 +932,12 @@ export const rules: readonly RuleDefinition[] = [
     profiles: ["public", "portfolio"],
     run(context) {
       const findings: Finding[] = [];
-      const imagePattern = /!\[[^\]]*\]\(([^)]+)\)/gu;
+      const imagePattern = /!\[[^\]]*\]\(([^)\n]+)\)/gu;
       for (const [sourcePath, source] of context.textCache.entries()) {
         if (!sourcePath.toLowerCase().endsWith(".md")) continue;
-        for (const match of source.matchAll(imagePattern)) {
-          const target = match[1]?.trim().split(/\s+/u)[0] ?? "";
+        const scanSource = maskMarkdownCode(source);
+        for (const match of scanSource.matchAll(imagePattern)) {
+          const target = markdownDestination(match[1] ?? "");
           if (
             !target ||
             /^https?:\/\//iu.test(target) ||

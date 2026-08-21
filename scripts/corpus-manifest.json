@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "reposentinel.corpus/v1",
+  "limits": {
+    "maxFindings": 500,
+    "maxReportBytes": 512000,
+    "maxScanSeconds": 30,
+    "maxBlockingSecurityFindings": 0
+  },
+  "repositories": [
+    {
+      "name": "colinhacks/zod",
+      "commit": "e516c3baf22615e20934116abebfed6c000222c2",
+      "minScore": 45
+    },
+    {
+      "name": "gin-gonic/gin",
+      "commit": "dcaa4296d111981ffb31ac3eba90bb63e1eb5ab9",
+      "minScore": 68
+    },
+    {
+      "name": "psf/requests",
+      "commit": "8f8b212de8c2129d7954c6cd373762880375620a",
+      "minScore": 71
+    },
+    {
+      "name": "sindresorhus/execa",
+      "commit": "8017b279e19347efaf2587711c2d57dbd4330740",
+      "minScore": 71
+    },
+    {
+      "name": "sindresorhus/slugify",
+      "commit": "7c318bd1aa4b4affab29761f15a9604323fe2a3b",
+      "minScore": 76
+    },
+    {
+      "name": "chalk/ansi-styles",
+      "commit": "c1c3dd4e017a2938807aaff0d361f46d086aeab7",
+      "minScore": 76
+    },
+    {
+      "name": "sindresorhus/p-limit",
+      "commit": "df476048d023ff868cd45b35ee47f5fb0ca2b25a",
+      "minScore": 76
+    },
+    {
+      "name": "rust-lang/log",
+      "commit": "3b939b6714616dc32193c12019861c7c518c5edb",
+      "minScore": 86
+    },
+    {
+      "name": "expressjs/express",
+      "commit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+      "minScore": 86
+    },
+    {
+      "name": "pallets/click",
+      "commit": "2c8cd3ac958a7eb316d67f2d316c27086c4c0369",
+      "minScore": 87
+    },
+    {
+      "name": "BurntSushi/ripgrep",
+      "commit": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+      "minScore": 73
+    },
+    {
+      "name": "tokio-rs/bytes",
+      "commit": "d5c8ad3227afe459c09f1d0d85455abf00f0381a",
+      "minScore": 66
+    }
+  ]
+}

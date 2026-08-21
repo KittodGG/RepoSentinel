@@ -3,6 +3,7 @@ import {
   exitCodeForFindings,
   type Finding,
   fingerprintFor,
+  limitFindings,
   normalizeFindings,
   redactSensitiveValue,
   scoreFindings,
@@ -58,6 +59,47 @@ describe("core contracts", () => {
     ).toBe(76);
   });
 
+  it("limits noisy findings and emits a truncation summary", () => {
+    const result = limitFindings(
+      Array.from({ length: 8 }, (_, index) =>
+        finding({
+          ruleId: index < 6 ? "links.valid" : "images.resolve",
+          line: index + 1,
+        }),
+      ),
+      3,
+      4,
+    );
+    expect(result.truncated).toBe(true);
+    expect(result.originalCount).toBe(8);
+    expect(
+      result.findings.filter((item) => item.ruleId === "links.valid"),
+    ).toHaveLength(3);
+    expect(
+      result.findings.some((item) => item.ruleId === "scan.findings-truncated"),
+    ).toBe(true);
+    expect(
+      result.findings.every(
+        (item) => item.ruleId !== "images.resolve" || item.line === 7,
+      ),
+    ).toBe(true);
+  });
+
+  it("caps score penalty contribution from a single noisy rule", () => {
+    const noisyRule = Array.from({ length: 20 }, () =>
+      finding({ ruleId: "ci.action-sha-pinned", severity: "warning" }),
+    );
+    expect(scoreFindings(noisyRule)).toBe(85);
+    expect(
+      scoreFindings([
+        finding({ ruleId: "first.rule", severity: "warning" }),
+        finding({ ruleId: "second.rule", severity: "warning" }),
+        finding({ ruleId: "third.rule", severity: "warning" }),
+        finding({ ruleId: "fourth.rule", severity: "warning" }),
+      ]),
+    ).toBe(80);
+  });
+
   it("applies threshold decisions without hiding warnings", () => {
     const findings = [finding({ severity: "warning" })];
     expect(exitCodeForFindings(findings, "error")).toBe(0);
@@ -104,7 +146,11 @@ describe("core contracts", () => {
       `sk-proj-${"d".repeat(24)}`,
       `sk-${"e".repeat(24)}`,
       `npm_${"f".repeat(24)}`,
-      `eyJ${"g".repeat(12)}.${"h".repeat(12)}.${"i".repeat(12)}`,
+      [
+        "eyJhbGciOiJIUzI1NiJ9",
+        "eyJzdWIiOiIxMjM0NTY3ODkwIn0",
+        "A".repeat(24),
+      ].join("."),
     ];
     for (const value of expanded) {
       const redacted = redactSensitiveValue(value);

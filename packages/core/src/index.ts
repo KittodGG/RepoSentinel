@@ -60,6 +60,13 @@ export type ScanBudget = {
   truncated: boolean;
 };
 
+export type FindingLimitResult = {
+  findings: Finding[];
+  truncated: boolean;
+  originalCount: number;
+  displayedCount: number;
+};
+
 export type RepositoryContext = {
   root: string;
   profile: RepositoryProfile;
@@ -116,6 +123,7 @@ const scorePenalty: Record<Severity, number> = {
   warning: 5,
   info: 1,
 };
+const PER_RULE_FINDING_CAP = 3;
 
 export function compareFindings(left: Finding, right: Finding): number {
   const severityDifference =
@@ -132,11 +140,67 @@ export function normalizeFindings(findings: readonly Finding[]): Finding[] {
   return [...findings].sort(compareFindings);
 }
 
+export function limitFindings(
+  findings: readonly Finding[],
+  maxFindingsPerRule = 50,
+  maxFindings = 500,
+): FindingLimitResult {
+  const perRuleCounts = new Map<string, number>();
+  const selected: Finding[] = [];
+  const omittedByRule = new Map<string, number>();
+  for (const finding of normalizeFindings(findings)) {
+    const ruleCount = perRuleCounts.get(finding.ruleId) ?? 0;
+    if (ruleCount >= maxFindingsPerRule || selected.length >= maxFindings) {
+      omittedByRule.set(
+        finding.ruleId,
+        (omittedByRule.get(finding.ruleId) ?? 0) + 1,
+      );
+      continue;
+    }
+    perRuleCounts.set(finding.ruleId, ruleCount + 1);
+    selected.push(finding);
+  }
+  if (omittedByRule.size === 0) {
+    return {
+      findings: selected,
+      truncated: false,
+      originalCount: findings.length,
+      displayedCount: selected.length,
+    };
+  }
+  for (const [ruleId, omitted] of omittedByRule) {
+    const displayed = perRuleCounts.get(ruleId) ?? 0;
+    selected.push({
+      ruleId: "scan.findings-truncated",
+      category: "ci",
+      severity: "info",
+      message: `${ruleId}: ${displayed + omitted} findings detected; ${displayed} displayed and ${omitted} omitted by the scan output budget.`,
+      remediation:
+        "Review the source files or rerun with narrower scope; a truncated report is not a complete finding inventory.",
+      metadata: {
+        truncatedRule: ruleId,
+        originalCount: displayed + omitted,
+        displayedCount: displayed,
+        omittedCount: omitted,
+      },
+    });
+  }
+  return {
+    findings: normalizeFindings(selected),
+    truncated: true,
+    originalCount: findings.length,
+    displayedCount: selected.length,
+  };
+}
+
 export function scoreFindings(findings: readonly Finding[]): number {
-  const penalty = findings.reduce(
-    (total, finding) => total + scorePenalty[finding.severity],
-    0,
-  );
+  const seenByRule = new Map<string, number>();
+  const penalty = findings.reduce((total, finding) => {
+    const seen = seenByRule.get(finding.ruleId) ?? 0;
+    if (seen >= PER_RULE_FINDING_CAP) return total;
+    seenByRule.set(finding.ruleId, seen + 1);
+    return total + scorePenalty[finding.severity];
+  }, 0);
   return Math.max(0, Math.min(100, 100 - penalty));
 }
 

@@ -359,6 +359,31 @@ describe("rules", () => {
     );
   });
 
+  it("keeps production keys critical but classifies test certificates as info", () => {
+    const key =
+      "-----BEGIN RSA PRIVATE KEY-----\n" +
+      "A".repeat(40) +
+      "\n-----END RSA PRIVATE KEY-----";
+    const findings = runRules(
+      context(
+        "public",
+        [file("tests/certs/server.key"), file("src/server.key")],
+        {
+          "tests/certs/server.key": key,
+          "src/server.key": key,
+        },
+      ),
+    ).filter((finding) => finding.ruleId === "security.private-key");
+    expect(findings.map((finding) => finding.severity)).toEqual([
+      "critical",
+      "info",
+    ]);
+    expect(
+      findings.find((finding) => finding.path === "tests/certs/server.key")
+        ?.message,
+    ).toContain("test-certificate");
+  });
+
   it("detects expanded credential prefixes but ignores short lookalikes", () => {
     const positives = [
       `sk_live_${"a".repeat(24)}`,
@@ -373,7 +398,11 @@ describe("rules", () => {
       `AKIA${"j".repeat(20)}`,
       `ASIA${"k".repeat(20)}`,
       `ghp_${"l".repeat(24)}`,
-      `eyJ${"m".repeat(12)}.${"n".repeat(12)}.${"o".repeat(12)}`,
+      [
+        "eyJhbGciOiJIUzI1NiJ9",
+        "eyJzdWIiOiIxMjM0NTY3ODkwIn0",
+        "A".repeat(24),
+      ].join("."),
     ];
     const negatives = [
       "sk_live_short",
@@ -388,7 +417,7 @@ describe("rules", () => {
       "AKIA_short",
       "ASIA_short",
       "ghp_short",
-      "eyJshort.eyJshort.eyJshort",
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature",
     ];
     const result = runRules(
       context("public", [file("src/config.ts")], {
@@ -414,11 +443,11 @@ describe("rules", () => {
     ].join("");
     const postgresConnection = [
       "postgres://",
-      "user:password@db.example.com:5432/application",
+      "appuser:long-secret-value@db.example.com:5432/application",
     ].join("");
     const mongoConnection = [
       "mongodb+srv://",
-      "user:password@cluster.example.com/application",
+      "appuser:long-secret-value@cluster.example.com/application",
     ].join("");
     const pgpKey =
       "-----BEGIN PGP PRIVATE KEY BLOCK-----\n" +
@@ -448,7 +477,9 @@ describe("rules", () => {
     expect(
       result.filter((finding) => finding.ruleId === "security.private-key"),
     ).toHaveLength(1);
-    expect(JSON.stringify(result)).not.toContain("password@db.example.com");
+    expect(JSON.stringify(result)).not.toContain(
+      "long-secret-value@db.example.com",
+    );
     expect(JSON.stringify(result)).not.toContain("BEGIN PGP PRIVATE KEY BLOCK");
   });
 
@@ -519,7 +550,56 @@ describe("rules", () => {
     ).toEqual([]);
   });
 
-  it("resolves repository-root absolute Markdown links", () => {
+  it("accepts Install and Usage headings and dual-license filenames", () => {
+    const install = runRules(
+      context("npm-package", [file("readme.md"), file("LICENSE-MIT")], {
+        "readme.md":
+          "# Package\n\n## Install\n\npnpm install\n\n## Usage\n\nnode index.js",
+      }),
+    );
+    expect(install.map((finding) => finding.ruleId)).not.toContain(
+      "documentation.quickstart",
+    );
+    expect(install.map((finding) => finding.ruleId)).not.toContain(
+      "community.license-present",
+    );
+  });
+
+  it("reports the discovered canonical filename and ignores Markdown code", () => {
+    const result = runRules(
+      context(
+        "public",
+        [file("readme.md"), file("docs/my file.md"), file(".gitignore")],
+        {
+          "readme.md": [
+            "# Demo",
+            "",
+            "```md",
+            "[Missing](docs/absent.md)",
+            "```",
+            "",
+            "[Inline](`docs/absent.md`)",
+            "[Angle](<docs/my file.md>)",
+            "[Broken](docs/absent.md)",
+          ].join("\n"),
+        },
+      ),
+    );
+    const linkFindings = result.filter(
+      (finding) => finding.ruleId === "links.valid",
+    );
+    expect(linkFindings).toHaveLength(1);
+    expect(linkFindings[0]?.evidence).toBe("docs/absent.md");
+
+    const missingQuickstart = runRules(
+      context("public", [file("readme.md"), file(".gitignore")], {
+        "readme.md": "# Demo",
+      }),
+    ).find((finding) => finding.ruleId === "documentation.quickstart");
+    expect(missingQuickstart?.path).toBe("readme.md");
+  });
+
+  it("does not treat root-absolute site routes as repository paths", () => {
     const result = runRules(
       context(
         "public",

@@ -118,19 +118,26 @@ export async function readChangedPaths(
 ): Promise<ChangedFilesResult> {
   validateGitRef(baseRef);
   const resolvedRoot = resolve(root);
-  const result = await execFile(
-    "git",
-    [
-      "-C",
-      resolvedRoot,
-      "diff",
-      "--name-only",
-      "-z",
-      `${baseRef}...HEAD`,
-      "--",
-    ],
-    { maxBuffer: 4 * 1024 * 1024 },
-  );
+  let result: { stdout: string };
+  try {
+    result = await execFile(
+      "git",
+      [
+        "-C",
+        resolvedRoot,
+        "diff",
+        "--name-only",
+        "-z",
+        `${baseRef}...HEAD`,
+        "--",
+      ],
+      { maxBuffer: 4 * 1024 * 1024 },
+    );
+  } catch {
+    throw new Error(
+      `Base ref "${baseRef}" was not found or could not be compared. Run git fetch origin first, or choose another branch, tag, or commit reference.`,
+    );
+  }
   const paths = result.stdout
     .split("\0")
     .filter(Boolean)
