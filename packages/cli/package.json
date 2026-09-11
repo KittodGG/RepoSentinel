@@ -31,12 +31,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
+    "@clack/prompts": "^1.8.0",
     "commander": "^15.0.0",
-    "ignore": "^7.0.6",
+    "ignore": "^7.0.8",
     "picocolors": "^1.1.1",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@reposentinel/config": "workspace:*",
@@ -45,7 +45,7 @@
     "@reposentinel/i18n": "workspace:*",
     "@reposentinel/reporters": "workspace:*",
     "@reposentinel/rules": "workspace:*",
-    "@types/node": "^26.2.0",
-    "tsx": "^4.20.3"
+    "@types/node": "^26.5.0",
+    "tsx": "^4.23.13"
   }
 }
