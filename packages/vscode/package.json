@@ -43,8 +43,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
-    "@types/vscode": "^1.103.0",
+    "@types/node": "^26.5.1",
+    "@types/vscode": "^1.137.0",
     "@vscode/vsce": "^3.6.0",
     "tsup": "^8.5.0",
     "typescript": "^6.0.3",
