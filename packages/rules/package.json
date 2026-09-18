@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@reposentinel/core": "workspace:*",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@reposentinel/i18n": "workspace:*",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.5.1",
     "tsup": "^8.5.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
